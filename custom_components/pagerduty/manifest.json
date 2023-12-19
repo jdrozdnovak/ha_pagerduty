@@ -2,11 +2,11 @@
 	"domain": "pagerduty",
 	"name": "pagerduty",
 	"codeowners": [ "@jdrozdnovak" ],
+	"config_flow": true,
 	"dependencies": [],
 	"documentation": "https://github.com/jdrozdnovak/ha_pagerduty",
 	"iot_class": "cloud_polling",
 	"issue_tracker": "https://github.com/jdrozdnovak/ha_pagerduty/issues",
 	"requirements": [],
-	"version": "0.0.2",
-	"config_flow": true
+	"version": "0.0.4"
 }

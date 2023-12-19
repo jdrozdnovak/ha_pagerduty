@@ -1,8 +1,8 @@
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.const import CONF_API_TOKEN, CONF_NAME
-from .const import DOMAIN
+from homeassistant.const import CONF_NAME
+from .const import DOMAIN, CONF_API_TOKEN
 
 class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for PagerDuty."""

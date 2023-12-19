@@ -4,9 +4,9 @@ from datetime import timedelta
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.const import CONF_API_TOKEN
+from .const import UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
-SCAN_INTERVAL = timedelta(seconds=60)  # Example interval, adjust as needed
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -33,7 +33,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name="PagerDuty",
-            update_interval=SCAN_INTERVAL,
+            update_interval=UPDATE_INTERVAL,
         )
 
     async def _async_update_data(self):

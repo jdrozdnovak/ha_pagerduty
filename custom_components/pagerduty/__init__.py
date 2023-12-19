@@ -7,8 +7,7 @@ from .const import DOMAIN
 CONFIG_SCHEMA = cv.config_entry_only_config_schema()
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Set up the PagerDuty component."""
-    # This method is for setting up the component globally if needed
+    hass.data[DOMAIN] = {}
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
