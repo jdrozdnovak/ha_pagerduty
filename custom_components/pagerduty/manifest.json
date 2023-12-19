@@ -1,6 +1,6 @@
 {
-	"domain": "Pagerduty",
-	"name": "Pagerduty",
+	"domain": "pagerduty",
+	"name": "pagerduty",
 	"codeowners": [ "@jdrozdnovak" ],
 	"dependencies": [],
 	"documentation": "https://github.com/jdrozdnovak/ha_pagerduty",
