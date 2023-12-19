@@ -1,7 +1,10 @@
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_TOKEN, CONF_NAME
+from homeassistant.helpers import config_validation as cv
 from .const import DOMAIN
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema()
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the PagerDuty component."""

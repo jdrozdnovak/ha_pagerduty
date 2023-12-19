@@ -20,7 +20,6 @@
         }
     },
     "options": {
-        "title": "PagerDuty Options",
         "step": {
             "init": {
                 "title": "Configure Options",
