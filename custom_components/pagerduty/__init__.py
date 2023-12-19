@@ -4,7 +4,7 @@ from homeassistant.const import CONF_API_TOKEN, CONF_NAME
 from homeassistant.helpers import config_validation as cv
 from .const import DOMAIN
 
-CONFIG_SCHEMA = cv.config_entry_only_config_schema()
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data[DOMAIN] = {}
