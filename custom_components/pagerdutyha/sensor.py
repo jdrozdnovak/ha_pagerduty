@@ -1,82 +1,105 @@
 import requests
 import logging
-from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
-from homeassistant.const import CONF_NAME, CONF_TOKEN
-from homeassistant.util import Throttle
-import voluptuous as vol
-import homeassistant.helpers.config_validation as cv
 from datetime import timedelta
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.const import CONF_API_TOKEN
 
-# Constants
-MIN_TIME_BETWEEN_SCANS = timedelta(seconds=60)
 _LOGGER = logging.getLogger(__name__)
-DOMAIN = "pagerduty"
-CONF_TEAM_NAME = "team_name"
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_NAME): cv.string,
-    vol.Required(CONF_TOKEN): cv.string,
-    vol.Required(CONF_TEAM_NAME): cv.string,
-})
+SCAN_INTERVAL = timedelta(seconds=60)  # Example interval, adjust as needed
 
-# Fetch Services from PagerDuty with Pagination
-def fetch_pagerduty_services(token, team_name):
-    services = []
-    url = "https://api.pagerduty.com/services"
-    headers = {
-        "Accept": "application/json",
-        "Authorization": f"Token token={token}"
-    }
-    params = {"include[]": "teams"}
-    while True:
-        response = requests.get(url, headers=headers, params=params)
-        if response.status_code != 200:
-            _LOGGER.error("Error fetching services from PagerDuty: %s", response.text)
-            break
-        data = response.json()
-        for service in data.get("services", []):
-            if any(team.get("summary") == team_name for team in service.get("teams", [])):
-                services.append(service)
-        if not data.get("more", False):
-            break
-        params["offset"] = data.get("offset", 0) + data.get("limit", 25)
-    return services
 
-# Setup Platform
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    name = config[CONF_NAME]
-    token = config[CONF_TOKEN]
-    team_name = config[CONF_TEAM_NAME]
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up the PagerDuty sensor from a config entry."""
+    api_token = config_entry.data.get(CONF_API_TOKEN)
+    team_id = config_entry.data.get("team_id")
 
-    services = fetch_pagerduty_services(token, team_name)
-    entities = []
-    for service in services:
-        entities.append(PagerDutyServiceSensor(service, name))
+    coordinator = PagerDutyDataCoordinator(hass, api_token, team_id)
+    await coordinator.async_refresh()
 
-    add_entities(entities)
+    sensors = [PagerDutyServiceSensor(coordinator)]
+    async_add_entities(sensors, False)
+
+
+class PagerDutyDataCoordinator(DataUpdateCoordinator):
+    """Class to manage fetching data from the API."""
+
+    def __init__(self, hass, api_token, team_id):
+        """Initialize the data coordinator."""
+        self.api_token = api_token
+        self.team_id = team_id
+
+        super().__init__(
+            hass,
+            _LOGGER,
+            name="PagerDuty",
+            update_interval=SCAN_INTERVAL,
+        )
+
+    async def _async_update_data(self):
+        """Fetch data from the PagerDuty API."""
+        url = "https://api.pagerduty.com/services"
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Token token={self.api_token}",
+        }
+        params = {"team_ids[]": self.team_id}
+
+        # Fetching services data
+        services_response = requests.get(url, headers=headers, params=params)
+        if services_response.status_code != 200:
+            raise UpdateFailed(f"Failed to fetch services: {services_response.reason}")
+
+        services_data = services_response.json().get("services", [])
+
+        # Structure to hold our parsed data
+        parsed_data = {}
+
+        # For each service, fetch incidents and aggregate data
+        for service in services_data:
+            service_id = service.get("id")
+            service_name = service.get("name")
+            incidents_url = f"https://api.pagerduty.com/incidents?service_ids[]={service_id}&statuses[]=triggered&statuses[]=acknowledged"
+
+            incidents_response = requests.get(incidents_url, headers=headers)
+            if incidents_response.status_code != 200:
+                raise UpdateFailed(
+                    f"Failed to fetch incidents for service {service_name}: {incidents_response.reason}"
+                )
+
+            incidents_data = incidents_response.json().get("incidents", [])
+            triggered_count = sum(
+                1 for incident in incidents_data if incident["status"] == "triggered"
+            )
+            acknowledged_count = sum(
+                1 for incident in incidents_data if incident["status"] == "acknowledged"
+            )
+
+            parsed_data[service_name] = {
+                "triggered_incidents": triggered_count,
+                "acknowledged_incidents": acknowledged_count,
+            }
+
+        return parsed_data
+
 
 class PagerDutyServiceSensor(SensorEntity):
-    def __init__(self, service, name_prefix):
-        """Initialize the sensor."""
-        self._service = service
-        self._name_prefix = name_prefix
-        self._state = None
-        self._attributes = {}
+    """Representation of a PagerDuty Sensor."""
 
-    @property
-    def unique_id(self):
-        """Return the unique ID of the sensor."""
-        # Use a combination of the name prefix and the service name for uniqueness
-        return f"{DOMAIN}_{self._name_prefix}_{self._service['name'].replace(' ', '_')}"
+    def __init__(self, coordinator):
+        """Initialize the sensor."""
+        self.coordinator = coordinator
+        self._state = None
 
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"{self._name_prefix} {self._service['name']}"
+        return "PagerDuty Sensor"
 
     @property
-    def icon(self):
-        """Return the icon of the sensor."""
-        return "mdi:bell-ring"
+    def unique_id(self):
+        """Return a unique ID to use for this sensor."""
+        return "pagerduty_unique_sensor_id"
 
     @property
     def native_value(self):
@@ -84,36 +107,16 @@ class PagerDutyServiceSensor(SensorEntity):
         return self._state
 
     @property
+    def should_poll(self):
+        """If entity should be polled."""
+        return False
+
+    async def async_update(self):
+        """Update the sensor."""
+        await self.coordinator.async_request_refresh()
+
+    @property
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
-        return self._attributes
-
-    @Throttle(MIN_TIME_BETWEEN_SCANS)
-    def update(self):
-        """Fetch new state data for the sensor."""
-        self._fetch_incidents_for_service()
-
-    def _fetch_incidents_for_service(self):
-        """Fetch incidents for the specific service and update state and attributes."""
-        url = f"https://api.pagerduty.com/incidents?service_ids[]={self._service['id']}&statuses[]=triggered&statuses[]=acknowledged"
-        headers = {
-            "Accept": "application/json",
-            "Authorization": f"Token token={YOUR_API_TOKEN}"  # Replace with actual token
-        }
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200:
-            _LOGGER.error("Error fetching incidents from PagerDuty: %s", response.text)
-            self._state = "Error"
-            return
-
-        data = response.json()
-        incidents = data.get("incidents", [])
-        triggered_count = sum(1 for incident in incidents if incident["status"] == "triggered")
-        acknowledged_count = sum(1 for incident in incidents if incident["status"] == "acknowledged")
-
-        # Update state and attributes
-        self._state = f"{triggered_count} Triggered, {acknowledged_count} Acknowledged"
-        self._attributes = {
-            "triggered_incidents": triggered_count,
-            "acknowledged_incidents": acknowledged_count
-        }
+        # You can add extra state attributes here
+        return {}
