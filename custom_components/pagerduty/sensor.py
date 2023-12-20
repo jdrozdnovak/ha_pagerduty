@@ -85,18 +85,17 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 class PagerDutyServiceSensor(SensorEntity):
-    """Representation of a PagerDuty Sensor."""
-
-    def __init__(self, coordinator, service_id):
+    def __init__(self, coordinator, service_id, service_name):
         """Initialize the sensor."""
         self.coordinator = coordinator
         self.service_id = service_id
+        self.service_name = service_name
         self._state = None
 
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"PagerDuty {self.service_id}"
+        return f"PagerDuty {self.service_name}"
 
     @property
     def unique_id(self):
