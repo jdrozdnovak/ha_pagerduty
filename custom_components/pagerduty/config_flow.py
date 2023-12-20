@@ -4,6 +4,7 @@ from homeassistant.core import callback
 from homeassistant.const import CONF_NAME
 from .const import DOMAIN, CONF_API_TOKEN
 
+
 class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for PagerDuty."""
 
@@ -20,10 +21,12 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(title="PagerDuty", data=user_input)
 
         # Specify the data needed for setup
-        data_schema = vol.Schema({
-            vol.Required(CONF_NAME): str,
-            vol.Required(CONF_API_TOKEN): str,
-        })
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_NAME): str,
+                vol.Required(CONF_API_TOKEN): str,
+            }
+        )
 
         return self.async_show_form(
             step_id="user", data_schema=data_schema, errors=errors
@@ -34,6 +37,7 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry):
         """Get the options flow for this handler."""
         return PagerDutyOptionsFlowHandler(config_entry)
+
 
 class PagerDutyOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle PagerDuty options."""

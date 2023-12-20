@@ -1,6 +1,7 @@
 import requests
 import logging
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.core import async_add_executor_job
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.const import CONF_API_TOKEN
 from .const import UPDATE_INTERVAL
@@ -37,11 +38,12 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Fetch data from the PagerDuty API."""
+
         def fetch():
             url = "https://api.pagerduty.com/services"
             headers = {
                 "Accept": "application/json",
-                "Authorization": f"Token token={self.api_token}"
+                "Authorization": f"Token token={self.api_token}",
             }
             params = {"team_ids[]": self.team_id}
             return requests.get(url, headers=headers, params=params).json()

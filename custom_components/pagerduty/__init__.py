@@ -6,9 +6,11 @@ from .const import DOMAIN
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
+
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data[DOMAIN] = {}
     return True
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up PagerDuty from a config entry."""
@@ -20,6 +22,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
