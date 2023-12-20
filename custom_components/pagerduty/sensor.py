@@ -9,6 +9,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up the PagerDuty sensor from a config entry."""
     api_token = config_entry.data.get(CONF_API_TOKEN)
     team_id = config_entry.data.get("team_id")
 
@@ -23,17 +24,21 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 class PagerDutyDataCoordinator(DataUpdateCoordinator):
+    """Class to manage fetching data from the API."""
+
     def __init__(self, hass, session, api_token, team_id, update_interval):
+        """Initialize the data coordinator."""
         self.api_token = api_token
         self.team_id = team_id
         self.session = session
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=update_interval)
 
     async def _async_update_data(self):
+        """Fetch data from the PagerDuty API."""
         url = "https://api.pagerduty.com/services"
         headers = {
             "Accept": "application/json",
-            "Authorization": f"Token token={self.api_token}"
+            "Authorization": f"Token token={self.api_token}",
         }
 
         # Ensure that api_token and team_id are not None
@@ -44,10 +49,57 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         params = {"team_ids[]": self.team_id}
 
         async with self.session.get(url, headers=headers, params=params) as response:
+            if response.status != 200:
+                raise UpdateFailed(f"Failed to fetch services: {response.reason}")
+            services_data = await response.json()
+
+        parsed_data = {}
+        # Process the services_data here and populate parsed_data
+        # ...
+        for service in services_data.get("services", []):
+            service_id = service.get("id")
+            service_name = service.get("name")
+
+            # URL to fetch incidents for this service
+            incidents_url = f"https://api.pagerduty.com/incidents?service_ids[]={service_id}&statuses[]=triggered&statuses[]=acknowledged"
+
+            async with self.session.get(
+                incidents_url, headers=headers
+            ) as incidents_response:
+                if incidents_response.status != 200:
+                    _LOGGER.error(
+                        f"Failed to fetch incidents for service {service_name}"
+                    )
+                    continue
+                incidents_data = await incidents_response.json()
+
+            # Count the incidents by status
+            triggered_count = sum(
+                1
+                for incident in incidents_data.get("incidents", [])
+                if incident["status"] == "triggered"
+            )
+            acknowledged_count = sum(
+                1
+                for incident in incidents_data.get("incidents", [])
+                if incident["status"] == "acknowledged"
+            )
+
+            # Add the counts to the parsed data
+            parsed_data[service_id] = {
+                "service_name": service_name,
+                "triggered_count": triggered_count,
+                "acknowledged_count": acknowledged_count,
+            }
+
+        return parsed_data
 
 
 class PagerDutyServiceSensor(SensorEntity):
+    """Representation of a PagerDuty Sensor."""
+
     def __init__(self, coordinator):
+        """Initialize the sensor."""
         self.coordinator = coordinator
         self._state = None
 
@@ -78,5 +130,17 @@ class PagerDutyServiceSensor(SensorEntity):
     @property
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
-        # You can add extra state attributes here
+        service_data = self.coordinator.data.get(self.service_id)
+        if service_data:
+            return {
+                "service_name": service_data.get("service_name"),
+                "acknowledged_count": service_data.get("acknowledged_count"),
+            }
         return {}
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        # Example: return the number of triggered incidents for this sensor
+        service_data = self.coordinator.data.get(self.service_id)
+        return service_data.get("triggered_count") if service_data else "Unavailable"
