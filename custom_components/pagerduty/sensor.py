@@ -26,8 +26,9 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug(
                     "Fetching PagerDuty services for team ID: %s", self.team_id
                 )
+                team_id_param = f'"{self.team_id}"'
                 services = self.session.rget(
-                    "services", params={"team_ids": [self.team_id]}
+                    "services", params={"team_ids[]": team_id_param}
                 )
                 _LOGGER.debug("Services response: %s", services)
                 parsed_data = {}
@@ -37,7 +38,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                     incidents = self.session.rget(
                         f"incidents",
                         params={
-                            "service_ids": [service_id],
+                            "service_ids": f'"{service_id}"',
                             "statuses": ["triggered", "acknowledged"],
                         },
                     )
