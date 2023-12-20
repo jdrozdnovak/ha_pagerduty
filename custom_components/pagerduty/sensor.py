@@ -2,6 +2,7 @@ import logging
 from pdpyras import APISession, PDClientError
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.const import STATE_UNKNOWN
 from .const import DOMAIN, UPDATE_INTERVAL, CONF_API_TOKEN, CONF_TEAM_ID
 
 _LOGGER = logging.getLogger(__name__)
@@ -56,7 +57,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                         "service_name": service_name,
                         "triggered_count": triggered_count,
                         "acknowledged_count": acknowledged_count,
-                        "incident_count": incident_count
+                        "incident_count": incident_count,
                     }
                 return parsed_data
             except PDClientError as e:
@@ -86,16 +87,16 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class PagerDutyServiceSensor(SensorEntity):
     """Representation of a PagerDuty Sensor."""
 
-    def __init__(self, coordinator, service_id, name):
+    def __init__(self, coordinator, service_id):
         """Initialize the sensor."""
         self.coordinator = coordinator
         self.service_id = service_id
-        self._name = name
+        self._state = None
 
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"PagerDuty Service: {self._name}"
+        return f"PagerDuty {self.service_id}"
 
     @property
     def unique_id(self):
@@ -103,10 +104,20 @@ class PagerDutyServiceSensor(SensorEntity):
         return f"pagerduty_{self.service_id}"
 
     @property
+    def state_class(self):
+        """Return the state class of the sensor."""
+        return "measurement"
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit of measurement."""
+        return "incidents"
+
+    @property
     def native_value(self):
         """Return the state of the sensor."""
-        service_data = self.coordinator.data.get(self.service_id, {})
-        return service_data.get("incident_count", "Unavailable")
+        service_data = self.coordinator.data.get(self.service_id)
+        return service_data.get("incident_count") if service_data else STATE_UNKNOWN
 
     @property
     def extra_state_attributes(self):
