@@ -7,16 +7,20 @@ from .const import DOMAIN, UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     api_token = config_entry.data.get(CONF_API_TOKEN)
     team_id = config_entry.data.get("team_id")
 
     session = aiohttp.ClientSession()
-    coordinator = PagerDutyDataCoordinator(hass, session, api_token, team_id, UPDATE_INTERVAL)
+    coordinator = PagerDutyDataCoordinator(
+        hass, session, api_token, team_id, UPDATE_INTERVAL
+    )
     await coordinator.async_refresh()
 
     sensors = [PagerDutyServiceSensor(coordinator)]
     async_add_entities(sensors, False)
+
 
 class PagerDutyDataCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, session, api_token, team_id, update_interval):
@@ -29,7 +33,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         url = "https://api.pagerduty.com/services"
         headers = {
             "Accept": "application/json",
-            "Authorization": f"Token token={self.api_token}"
+            "Authorization": f"Token token={self.api_token}",
         }
         params = {"team_ids[]": self.team_id}
 
@@ -37,6 +41,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
             if response.status != 200:
                 raise UpdateFailed(f"Failed to fetch services: {response.reason}")
             return await response.json()
+
 
 class PagerDutyServiceSensor(SensorEntity):
     def __init__(self, coordinator):
