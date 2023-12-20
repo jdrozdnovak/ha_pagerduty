@@ -19,39 +19,39 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Fetch data from the PagerDuty API."""
-        _LOGGER.debug("Fetching data from PagerDuty API")
-        try:
-            services = self.session.rget(f"services?team_ids[]={self.team_id}")
-            _LOGGER.debug("Services fetched: %s", services)
-            parsed_data = {}
-            for service in services:
-                service_id = service["id"]
-                service_name = service["name"]
-                _LOGGER.debug("Processing service: %s", service_name)
 
-                incidents = self.session.rget(
-                    f"incidents?service_ids[]={service_id}&statuses[]=triggered&statuses[]=acknowledged"
-                )
-                _LOGGER.debug("Incidents fetched for %s: %s", service_name, incidents)
+        def fetch_data():
+            """Fetch the data synchronously."""
+            try:
+                services = self.session.rget(f"services?team_ids[]={self.team_id}")
+                parsed_data = {}
+                for service in services:
+                    service_id = service["id"]
+                    service_name = service["name"]
+                    incidents = self.session.rget(
+                        f"incidents?service_ids[]={service_id}&statuses[]=triggered&statuses[]=acknowledged"
+                    )
 
-                triggered_count = sum(
-                    1 for incident in incidents if incident["status"] == "triggered"
-                )
-                acknowledged_count = sum(
-                    1 for incident in incidents if incident["status"] == "acknowledged"
-                )
+                    triggered_count = sum(
+                        1 for incident in incidents if incident["status"] == "triggered"
+                    )
+                    acknowledged_count = sum(
+                        1
+                        for incident in incidents
+                        if incident["status"] == "acknowledged"
+                    )
 
-                parsed_data[service_id] = {
-                    "service_name": service_name,
-                    "triggered_count": triggered_count,
-                    "acknowledged_count": acknowledged_count,
-                }
+                    parsed_data[service_id] = {
+                        "service_name": service_name,
+                        "triggered_count": triggered_count,
+                        "acknowledged_count": acknowledged_count,
+                    }
+                return parsed_data
+            except PDClientError as e:
+                _LOGGER.error("Error fetching data from PagerDuty: %s", e)
+                raise UpdateFailed(f"Error fetching data from PagerDuty: {e}")
 
-            _LOGGER.debug("Parsed data: %s", parsed_data)
-            return parsed_data
-        except PDClientError as e:
-            _LOGGER.error("Error fetching data from PagerDuty: %s", e)
-            raise UpdateFailed(f"Error fetching data from PagerDuty: {e}")
+        return await self.hass.async_add_executor_job(fetch_data)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):

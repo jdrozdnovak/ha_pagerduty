@@ -25,14 +25,10 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         errors = {}
-
         if user_input is not None:
-            valid = await self.hass.async_add_executor_job(
-                self.validate_input, self.hass, user_input[CONF_API_TOKEN]
-            )
+            valid = await self.validate_input(self.hass, user_input[CONF_API_TOKEN])
             if not valid:
                 errors["base"] = "invalid_auth"
-
             if not errors:
                 return self.async_create_entry(title="PagerDuty", data=user_input)
 
