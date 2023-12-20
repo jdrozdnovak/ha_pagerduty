@@ -25,11 +25,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Handle removal of an entry."""
     # Unload the sensor platform
     await hass.config_entries.async_forward_entry_unload(entry, "sensor")
 
-    # Clean up any data if needed
-    hass.data[DOMAIN].pop(entry.entry_id)
+    # Close the aiohttp session
+    if "aiohttp_session" in hass.data[DOMAIN]:
+        await hass.data[DOMAIN]["aiohttp_session"].close()
+        hass.data[DOMAIN].pop("aiohttp_session")
 
+    hass.data[DOMAIN].pop(entry.entry_id)
     return True
