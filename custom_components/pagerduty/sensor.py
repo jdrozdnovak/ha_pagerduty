@@ -26,20 +26,19 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                     "Fetching PagerDuty services for team ID: %s", self.team_id
                 )
                 # Use session.list_all for automatic pagination handling
-                services = self.session.list_all(
-                    "services", params={"team_ids[]": self.team_id}
-                )
+                params = {"team_ids[]": self.team_id}
+                services = self.session.list_all("services", params=params)
 
                 parsed_data = {}
                 for service in services:
                     service_id = service["id"]
                     service_name = service["name"]
+                    incidents_params = {
+                        "service_ids[]": service_id,
+                        "statuses[]": ["triggered", "acknowledged"],
+                    }
                     incidents = self.session.list_all(
-                        "incidents",
-                        params={
-                            "service_ids[]": service_id,
-                            "statuses[]": ["triggered", "acknowledged"],
-                        },
+                        "incidents", params=incidents_params
                     )
 
                     triggered_count = sum(
