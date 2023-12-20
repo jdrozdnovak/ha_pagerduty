@@ -19,7 +19,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     )
     await coordinator.async_refresh()
 
-    sensors = [PagerDutyServiceSensor(coordinator)]
+    sensors = []
+    for service_id in coordinator.data:
+        sensors.append(PagerDutyServiceSensor(coordinator, service_id))
+
     async_add_entities(sensors, False)
 
 
@@ -98,9 +101,10 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
 class PagerDutyServiceSensor(SensorEntity):
     """Representation of a PagerDuty Sensor."""
 
-    def __init__(self, coordinator):
+    def __init__(self, coordinator, service_id):
         """Initialize the sensor."""
         self.coordinator = coordinator
+        self.service_id = service_id
         self._state = None
 
     @property
@@ -141,6 +145,5 @@ class PagerDutyServiceSensor(SensorEntity):
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        # Example: return the number of triggered incidents for this sensor
-        service_data = self.coordinator.data.get(self.service_id)
-        return service_data.get("triggered_count") if service_data else "Unavailable"
+        service_data = self.coordinator.data.get(self.service_id, {})
+        return service_data.get("triggered_count", "Unavailable")

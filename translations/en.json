@@ -1,0 +1,22 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Configure PagerDuty",
+                "description": "Enter your PagerDuty API token and team ID.",
+                "data": {
+                    "api_token": "API Token",
+                    "team_id": "Team ID"
+                }
+            }
+        },
+        "error": {
+            "invalid_api_token": "The provided API token is invalid.",
+            "invalid_team_id": "The provided team ID is invalid.",
+            "unknown": "An unknown error occurred."
+        },
+        "abort": {
+            "already_configured": "This PagerDuty account is already configured."
+        }
+    }
+}

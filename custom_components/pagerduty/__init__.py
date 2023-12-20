@@ -33,5 +33,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await hass.data[DOMAIN]["aiohttp_session"].close()
         hass.data[DOMAIN].pop("aiohttp_session")
 
-    hass.data[DOMAIN].pop(entry.entry_id)
+    hass.data[DOMAIN].pop(entry.entry_id, None)
     return True
