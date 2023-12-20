@@ -37,6 +37,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=update_interval)
 
     async def _async_update_data(self):
+        _LOGGER.debug("Fetching data from PagerDuty API")
         """Fetch data from the PagerDuty API."""
         url = "https://api.pagerduty.com/services"
         headers = {
@@ -64,6 +65,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
             service_name = service.get("name")
 
             # URL to fetch incidents for this service
+            _LOGGER.debug("Processing service: %s", service)
             incidents_url = f"https://api.pagerduty.com/incidents?service_ids[]={service_id}&statuses[]=triggered&statuses[]=acknowledged"
 
             async with self.session.get(
@@ -95,6 +97,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                 "acknowledged_count": acknowledged_count,
             }
 
+        _LOGGER.debug("Parsed data: %s", parsed_data)
         return parsed_data
 
 
