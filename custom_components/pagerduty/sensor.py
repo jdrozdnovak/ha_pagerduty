@@ -23,9 +23,13 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         def fetch_data():
             """Fetch the data synchronously."""
             try:
-                services = self.session.rget(
-                    "services", params={"team_ids[]": self.team_id}
+                _LOGGER.debug(
+                    "Fetching PagerDuty services for team ID: %s", self.team_id
                 )
+                services = self.session.rget(
+                    "services", params={"team_ids": [self.team_id]}
+                )
+                _LOGGER.debug("Services response: %s", services)
                 parsed_data = {}
                 for service in services:
                     service_id = service["id"]
@@ -33,8 +37,8 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                     incidents = self.session.rget(
                         f"incidents",
                         params={
-                            "service_ids[]": service_id,
-                            "statuses[]": ["triggered", "acknowledged"],
+                            "service_ids": [service_id],
+                            "statuses": ["triggered", "acknowledged"],
                         },
                     )
 
