@@ -7,6 +7,6 @@
 	"documentation": "https://github.com/jdrozdnovak/ha_pagerduty",
 	"iot_class": "cloud_polling",
 	"issue_tracker": "https://github.com/jdrozdnovak/ha_pagerduty/issues",
-	"requirements": [],
-	"version": "0.0.11"
+	"requirements": ["pdpyras>=5.1.0"],
+	"version": "0.0.12"
 }

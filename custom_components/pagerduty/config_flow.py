@@ -5,6 +5,7 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
 from .const import CONF_API_TOKEN, CONF_TEAM_ID
 from .const import DOMAIN
+from pdpyras import APISession, PDClientError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -15,43 +16,28 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def validate_input(self, hass, token):
         """Validate the user input allows us to connect."""
-        _LOGGER.debug("Validating input token: %s", token)
-        url = "https://api.pagerduty.com/abilities"
-        headers = {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "Authorization": f"Token token={token}",
-        }
-
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                if response.status != 200:
-                    return False
-                data = await response.json()
-                return "incidents*" in data and "services*" in data
+        session = APISession(token)
+        try:
+            # Test API call; adjust endpoint as necessary
+            session.rget("abilities")
+            return True
+        except PDClientError:
+            return False
 
     async def async_step_user(self, user_input=None):
-        _LOGGER.debug("async_step_user called with user_input: %s", user_input)
         errors = {}
 
         if user_input is not None:
-            valid = await self.validate_input(self.hass, user_input[CONF_API_TOKEN])
-            _LOGGER.debug("Validation result: %s", valid)
+            valid = await hass.async_add_executor_job(
+                self.validate_input, hass, user_input[CONF_API_TOKEN]
+            )
             if not valid:
                 errors["base"] = "invalid_auth"
-                _LOGGER.error("Validation failed: invalid_auth")
 
             if not errors:
-                _LOGGER.info("Validation successful, creating entry")
                 return self.async_create_entry(title="PagerDuty", data=user_input)
 
-        data_schema = vol.Schema(
-            {
-                vol.Required(CONF_API_TOKEN): str,
-                vol.Required(CONF_TEAM_ID): str,
-            }
-        )
-
+        data_schema = vol.Schema({vol.Required(CONF_API_TOKEN): str})
         return self.async_show_form(
             step_id="user", data_schema=data_schema, errors=errors
         )
