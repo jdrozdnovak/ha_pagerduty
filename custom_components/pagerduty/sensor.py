@@ -21,25 +21,24 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         """Fetch data from the PagerDuty API."""
 
         def fetch_data():
-            """Fetch the data synchronously."""
             try:
                 _LOGGER.debug(
                     "Fetching PagerDuty services for team ID: %s", self.team_id
                 )
-                team_id_param = f'"{self.team_id}"'
-                services = self.session.rget(
-                    "services", params={"team_ids[]": team_id_param}
+                # Use session.list_all for automatic pagination handling
+                services = self.session.list_all(
+                    "services", params={"team_ids[]": self.team_id}
                 )
-                _LOGGER.debug("Services response: %s", services)
+
                 parsed_data = {}
                 for service in services:
                     service_id = service["id"]
                     service_name = service["name"]
-                    incidents = self.session.rget(
-                        f"incidents",
+                    incidents = self.session.list_all(
+                        "incidents",
                         params={
-                            "service_ids": f'"{service_id}"',
-                            "statuses": ["triggered", "acknowledged"],
+                            "service_ids[]": service_id,
+                            "statuses[]": ["triggered", "acknowledged"],
                         },
                     )
 
