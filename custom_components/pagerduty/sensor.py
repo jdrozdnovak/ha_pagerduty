@@ -33,14 +33,17 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         url = "https://api.pagerduty.com/services"
         headers = {
             "Accept": "application/json",
-            "Authorization": f"Token token={self.api_token}",
+            "Authorization": f"Token token={self.api_token}"
         }
+
+        # Ensure that api_token and team_id are not None
+        if self.api_token is None or self.team_id is None:
+            _LOGGER.error("API token or team ID is not set.")
+            raise UpdateFailed("API token or team ID is not set.")
+
         params = {"team_ids[]": self.team_id}
 
         async with self.session.get(url, headers=headers, params=params) as response:
-            if response.status != 200:
-                raise UpdateFailed(f"Failed to fetch services: {response.reason}")
-            return await response.json()
 
 
 class PagerDutyServiceSensor(SensorEntity):
