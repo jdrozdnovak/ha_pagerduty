@@ -28,6 +28,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         """Initialize the data coordinator."""
         self.api_token = api_token
         self.team_id = team_id
+        self.hass = hass
 
         super().__init__(
             hass,
@@ -46,10 +47,13 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                 "Authorization": f"Token token={self.api_token}",
             }
             params = {"team_ids[]": self.team_id}
-            return requests.get(url, headers=headers, params=params).json()
+            response = requests.get(url, headers=headers, params=params)
+            if response.status_code != 200:
+                raise Exception(f"Failed to fetch services: {response.reason}")
+            return response.json()
 
         try:
-            services_data = await async_add_executor_job(fetch)
+            return await self.hass.async_add_executor_job(fetch)
         except Exception as e:
             raise UpdateFailed(f"Failed to fetch services: {e}")
 
