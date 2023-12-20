@@ -1,5 +1,4 @@
 import logging
-import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
@@ -28,8 +27,8 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            valid = await hass.async_add_executor_job(
-                self.validate_input, hass, user_input[CONF_API_TOKEN]
+            valid = await self.hass.async_add_executor_job(
+                self.validate_input, self.hass, user_input[CONF_API_TOKEN]
             )
             if not valid:
                 errors["base"] = "invalid_auth"
@@ -37,7 +36,12 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not errors:
                 return self.async_create_entry(title="PagerDuty", data=user_input)
 
-        data_schema = vol.Schema({vol.Required(CONF_API_TOKEN): str})
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_API_TOKEN): str,
+                vol.Required(CONF_TEAM_ID): str,
+            }
+        )
         return self.async_show_form(
             step_id="user", data_schema=data_schema, errors=errors
         )

@@ -2,7 +2,7 @@ import logging
 from pdpyras import APISession, PDClientError
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from .const import DOMAIN, UPDATE_INTERVAL
+from .const import DOMAIN, UPDATE_INTERVAL, CONF_API_TOKEN, CONF_TEAM_ID
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -10,17 +10,18 @@ _LOGGER = logging.getLogger(__name__)
 class PagerDutyDataCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the PagerDuty API."""
 
-    def __init__(self, hass, api_token, update_interval):
+    def __init__(self, hass, api_token, update_interval, team_id):
         """Initialize the data coordinator."""
         _LOGGER.debug("Initializing PagerDuty Data Coordinator")
         self.session = APISession(api_token)
+        self.team_id = team_id
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=update_interval)
 
     async def _async_update_data(self):
         """Fetch data from the PagerDuty API."""
         _LOGGER.debug("Fetching data from PagerDuty API")
         try:
-            services = self.session.rget("services")
+            services = self.session.rget(f"services?team_ids[]={self.team_id}")
             _LOGGER.debug("Services fetched: %s", services)
             parsed_data = {}
             for service in services:
@@ -55,9 +56,10 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the PagerDuty sensor from a config entry."""
-    api_token = config_entry.data.get("api_token")
+    api_token = config_entry.data.get(CONF_API_TOKEN)
+    team_id = config_entry.data.get(CONF_TEAM_ID)
 
-    coordinator = PagerDutyDataCoordinator(hass, api_token, UPDATE_INTERVAL)
+    coordinator = PagerDutyDataCoordinator(hass, api_token, team_id, UPDATE_INTERVAL)
     await coordinator.async_config_entry_first_refresh()
 
     sensors = []

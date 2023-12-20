@@ -8,5 +8,5 @@
 	"iot_class": "cloud_polling",
 	"issue_tracker": "https://github.com/jdrozdnovak/ha_pagerduty/issues",
 	"requirements": ["pdpyras>=5.1.0"],
-	"version": "0.0.12"
+	"version": "0.0.13"
 }
