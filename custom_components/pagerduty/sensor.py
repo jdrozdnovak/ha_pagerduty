@@ -41,6 +41,8 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                         "incidents", params=incidents_params
                     )
 
+                    incident_count = sum(1 for incident in incidents)
+
                     triggered_count = sum(
                         1 for incident in incidents if incident["status"] == "triggered"
                     )
@@ -54,6 +56,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                         "service_name": service_name,
                         "triggered_count": triggered_count,
                         "acknowledged_count": acknowledged_count,
+                        "incident_count": incident_count
                     }
                 return parsed_data
             except PDClientError as e:
@@ -103,7 +106,7 @@ class PagerDutyServiceSensor(SensorEntity):
     def native_value(self):
         """Return the state of the sensor."""
         service_data = self.coordinator.data.get(self.service_id, {})
-        return service_data.get("triggered_count", "Unavailable")
+        return service_data.get("incident_count", "Unavailable")
 
     @property
     def extra_state_attributes(self):

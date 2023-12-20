@@ -4,8 +4,8 @@
             "user": {
                 "description": "Please enter your PagerDuty API key and Team ID",
                 "data": {
-                    "api_token": "API Token",
-                    "team_id": "Team ID"
+                    "api_token": "APIToken",
+                    "team_id": "TeamID"
                 }
             }
         },
@@ -14,6 +14,15 @@
         },
         "abort": {
             "already_configured": "This PagerDuty account is already configured."
+        }
+    },
+    "options": {
+        "step": {
+            "user": {
+                "data": {
+                    "update_interval": "API update interval (seconds)"
+                }
+            }
         }
     }
 }
