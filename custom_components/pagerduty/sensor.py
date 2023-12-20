@@ -10,7 +10,7 @@ _LOGGER = logging.getLogger(__name__)
 class PagerDutyDataCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the PagerDuty API."""
 
-    def __init__(self, hass, api_token, update_interval, team_id):
+    def __init__(self, hass, api_token, team_id, update_interval):
         """Initialize the data coordinator."""
         _LOGGER.debug("Initializing PagerDuty Data Coordinator")
         self.session = APISession(api_token)
