@@ -2,7 +2,7 @@ import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.const import CONF_API_TOKEN
+from .const import CONF_API_TOKEN, CONF_TEAM_ID
 from .const import DOMAIN
 
 
@@ -40,7 +40,7 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_API_TOKEN): str,
-                vol.Required("team_id"): str,
+                vol.Required(CONF_TEAM_ID): str,
             }
         )
 

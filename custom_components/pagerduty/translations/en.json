@@ -2,7 +2,6 @@
     "config": {
         "step": {
             "user": {
-                "title": "PagerDuty Integration",
                 "description": "Please enter your PagerDuty API key and Team ID",
                 "data": {
                     "api_token": "API Token",
