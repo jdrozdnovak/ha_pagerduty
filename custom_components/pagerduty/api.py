@@ -45,10 +45,21 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
             user_info = await self.hass.async_add_executor_job(
                 fetch_user_teams_wrapper, self.session
             )
-            user_id = user_info["id"]
-            teams_data = user_info["user"]["teams"]
-            team_ids = [(team["id"], team["name"]) for team in teams_data]
-            return user_id, team_ids
+            _LOGGER.debug("User info: %s", user_info)
+
+            if "user" in user_info and "teams" in user_info["user"]:
+                user_id = user_info["user"]["id"]
+                teams = [
+                    {"id": team["id"], "name": team["name"]}
+                    for team in user_info["user"]["teams"]
+                ]
+                return user_id, teams
+            else:
+                _LOGGER.error(
+                    "Unexpected structure in user info response: %s", user_info
+                )
+                raise UpdateFailed("Unexpected structure in user info response")
+
         except PDClientError as e:
             _LOGGER.error("Error fetching user teams from PagerDuty: %s", e)
             raise UpdateFailed(f"Error fetching user teams from PagerDuty: {e}")
