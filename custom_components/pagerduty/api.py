@@ -19,6 +19,8 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Fetch data from the PagerDuty API."""
+        user_id, user_teams = await fetch_user_teams()
+        on_call_data = await fetch_on_call_data(user_id)
 
         async def fetch_user_teams():
             try:
@@ -26,7 +28,9 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                 user_info = await self.hass.async_add_executor_job(
                     self.session.list_all, "users/me", {"include[]": "teams"}
                 )
-                return [team["id"] for team in user_info["teams"]]
+                user_id = user_info["user"]["id"]
+                team_ids = [team["id"] for team in user_info["teams"]]
+                return user_id, team_ids
             except PDClientError as e:
                 _LOGGER.error("Error fetching user teams from PagerDuty: %s", e)
                 raise UpdateFailed(f"Error fetching user teams from PagerDuty: {e}")
@@ -34,10 +38,10 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         async def fetch_on_call_data():
             try:
                 _LOGGER.debug("Fetching PagerDuty on-call data")
-                params = {"user_ids[]": "me"}
+                params = {"user_ids[]": user_id}
                 on_calls = await self.hass.async_add_executor_job(
                     self.session.list_all, "oncalls", params=params
-                    )
+                )
                 on_call_data = []
                 for on_call in on_calls:
                     start = datetime.datetime.fromisoformat(on_call["start"])
