@@ -15,6 +15,20 @@ def fetch_on_call_data_wrapper(session, user_id):
     return session.list_all("oncalls", params={"user_ids[]": user_id})
 
 
+def fetch_services_wrapper(session, team_id):
+    return session.list_all("services", params={"team_ids[]": team_id})
+
+
+def fetch_incidents_wrapper(session, service_id):
+    return session.list_all(
+        "incidents",
+        params={
+            "service_ids[]": service_id,
+            "statuses[]": ["triggered", "acknowledged"],
+        },
+    )
+
+
 class PagerDutyDataCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the PagerDuty API."""
 
@@ -121,20 +135,15 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         parsed_data = {}
         for team_id in user_teams:
             _LOGGER.debug("Fetching PagerDuty services for team ID: %s", team_id)
-            params = {"team_ids[]": team_id}
             services = await self.hass.async_add_executor_job(
-                self.session.list_all, "services", params=params
+                fetch_services_wrapper, self.session, team_id
             )
 
             for service in services:
                 service_id = service["id"]
                 service_name = service["name"]
-                incidents_params = {
-                    "service_ids[]": service_id,
-                    "statuses[]": ["triggered", "acknowledged"],
-                }
                 incidents = await self.hass.async_add_executor_job(
-                    self.session.list_all, "incidents", params=incidents_params
+                    fetch_incidents_wrapper, self.session, service_id
                 )
 
                 incident_count = sum(1 for incident in incidents)
