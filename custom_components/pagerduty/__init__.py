@@ -7,6 +7,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the PagerDuty integration."""
     hass.data[DOMAIN] = {}
     return True
 
@@ -15,22 +16,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up PagerDuty from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
-    # Add setup for sensor platform here
     hass.async_create_task(
         hass.config_entries.async_forward_entry_setup(entry, "sensor")
+    )
+
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(entry, "binary_sensor")
     )
 
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    # Unload the sensor platform
-    await hass.config_entries.async_forward_entry_unload(entry, "sensor")
+    """Handle removal of an entry."""
+    unload_ok = await hass.config_entries.async_forward_entry_unload(entry, "sensor")
 
-    # Close the aiohttp session
-    if "aiohttp_session" in hass.data[DOMAIN]:
-        await hass.data[DOMAIN]["aiohttp_session"].close()
-        hass.data[DOMAIN].pop("aiohttp_session")
+    unload_ok &= await hass.config_entries.async_forward_entry_unload(
+        entry, "binary_sensor"
+    )
 
-    hass.data[DOMAIN].pop(entry.entry_id, None)
-    return True
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id)
+
+    return unload_ok

@@ -49,10 +49,15 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
 
             if "teams" in user_info:
                 user_id = user_info["id"]
-                teams = [{"id": team["id"], "name": team["name"]} for team in user_info["teams"]]
+                teams = [
+                    {"id": team["id"], "name": team["name"]}
+                    for team in user_info["teams"]
+                ]
                 return user_id, teams
             else:
-                _LOGGER.error("Unexpected structure in user info response: %s", user_info)
+                _LOGGER.error(
+                    "Unexpected structure in user info response: %s", user_info
+                )
                 raise UpdateFailed("Unexpected structure in user info response")
 
         except PDClientError as e:
