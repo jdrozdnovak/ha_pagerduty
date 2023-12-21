@@ -46,18 +46,49 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                 fetch_on_call_data_wrapper, self.session, user_id
             )
             on_call_data = []
+            closest_on_call_start = None
+            closest_on_call = None
+            current_time = datetime.datetime.now()
+
             for on_call in on_calls:
-                start = datetime.datetime.fromisoformat(on_call["start"])
-                end = datetime.datetime.fromisoformat(on_call["end"])
+                start = on_call.get("start")
+                end = on_call.get("end")
+
+                if start and isinstance(start, str):
+                    start = datetime.datetime.fromisoformat(start)
+                if end and isinstance(end, str):
+                    end = datetime.datetime.fromisoformat(end)
+
+                if start and start > current_time:
+                    if closest_on_call_start is None or start < closest_on_call_start:
+                        closest_on_call_start = start
+                        closest_on_call = on_call
+
                 on_call_data.append(
                     {
-                        "schedule_id": on_call["schedule"]["id"],
-                        "schedule_name": on_call["schedule"]["summary"],
+                        "schedule_id": on_call.get("schedule", {}).get("id"),
+                        "schedule_name": on_call.get("schedule", {}).get("summary"),
                         "start": start,
                         "end": end,
-                        "escalation_level": on_call["escalation_level"],
+                        "escalation_level": on_call.get("escalation_level"),
                     }
                 )
+
+            if closest_on_call:
+                # Add closest on-call to the data
+                on_call_data.append(
+                    {
+                        "schedule_id": closest_on_call.get("schedule", {}).get("id"),
+                        "schedule_name": closest_on_call.get("schedule", {}).get(
+                            "summary"
+                        ),
+                        "start": closest_on_call_start,
+                        "end": closest_on_call.get("end"),
+                        "escalation_level": closest_on_call.get("escalation_level"),
+                        "is_closest": True,
+                    }
+                )
+
             return on_call_data
         except PDClientError as e:
             _LOGGER.error("Error fetching on-call data from PagerDuty: %s", e)
