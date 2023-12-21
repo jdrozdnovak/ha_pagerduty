@@ -3,7 +3,6 @@ DOMAIN = "pagerduty"
 
 # Configuration keys
 CONF_API_TOKEN = "api_token"
-CONF_TEAM_ID = "team_id"
 
 # Constants for data keys, sensor types, etc.
 SENSOR_TYPE_SERVICE = "service"

@@ -2,7 +2,7 @@ import logging
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
-from .const import CONF_API_TOKEN, CONF_TEAM_ID, DOMAIN
+from .const import CONF_API_TOKEN, DOMAIN
 from pdpyras import APISession, PDClientError
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,7 +42,6 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_API_TOKEN): str,
-                vol.Required(CONF_TEAM_ID): str,
             }
         )
         return self.async_show_form(

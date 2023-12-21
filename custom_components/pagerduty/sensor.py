@@ -1,106 +1,46 @@
 import logging
-from pdpyras import APISession, PDClientError
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.const import STATE_UNKNOWN
-from .const import DOMAIN, UPDATE_INTERVAL, CONF_API_TOKEN, CONF_TEAM_ID
+from .api import PagerDutyDataCoordinator
+from .const import UPDATE_INTERVAL, CONF_API_TOKEN
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class PagerDutyDataCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching data from the PagerDuty API."""
-
-    def __init__(self, hass, api_token, team_id, update_interval):
-        """Initialize the data coordinator."""
-        _LOGGER.debug("Initializing PagerDuty Data Coordinator")
-        self.session = APISession(api_token)
-        self.team_id = team_id
-        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=update_interval)
-
-    async def _async_update_data(self):
-        """Fetch data from the PagerDuty API."""
-
-        def fetch_data():
-            try:
-                _LOGGER.debug(
-                    "Fetching PagerDuty services for team ID: %s", self.team_id
-                )
-                # Use session.list_all for automatic pagination handling
-                params = {"team_ids[]": self.team_id}
-                services = self.session.list_all("services", params=params)
-
-                parsed_data = {}
-                for service in services:
-                    service_id = service["id"]
-                    service_name = service["name"]
-                    incidents_params = {
-                        "service_ids[]": service_id,
-                        "statuses[]": ["triggered", "acknowledged"],
-                    }
-                    incidents = self.session.list_all(
-                        "incidents", params=incidents_params
-                    )
-
-                    incident_count = sum(1 for incident in incidents)
-
-                    triggered_count = sum(
-                        1 for incident in incidents if incident["status"] == "triggered"
-                    )
-                    acknowledged_count = sum(
-                        1
-                        for incident in incidents
-                        if incident["status"] == "acknowledged"
-                    )
-
-                    parsed_data[service_id] = {
-                        "service_name": service_name,
-                        "triggered_count": triggered_count,
-                        "acknowledged_count": acknowledged_count,
-                        "incident_count": incident_count,
-                    }
-                return parsed_data
-            except PDClientError as e:
-                _LOGGER.error("Error fetching data from PagerDuty: %s", e)
-                raise UpdateFailed(f"Error fetching data from PagerDuty: {e}")
-
-        return await self.hass.async_add_executor_job(fetch_data)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the PagerDuty sensor from a config entry."""
     api_token = config_entry.data.get(CONF_API_TOKEN)
-    team_id = config_entry.data.get(CONF_TEAM_ID)
 
-    coordinator = PagerDutyDataCoordinator(hass, api_token, team_id, UPDATE_INTERVAL)
+    coordinator = PagerDutyDataCoordinator(hass, api_token, UPDATE_INTERVAL)
     await coordinator.async_config_entry_first_refresh()
 
     sensors = []
-    for service_id, data in coordinator.data.items():
-        sensors.append(
-            PagerDutyServiceSensor(coordinator, service_id, data["service_name"])
-        )
+    for key, data in coordinator.data.items():
+        team_name = data["team_name"]
+        service_name = data["service_name"]
+        sensor_name = f"{team_name} {service_name}"
+        sensors.append(PagerDutyServiceSensor(coordinator, key, sensor_name))
 
     async_add_entities(sensors, False)
 
 
 class PagerDutyServiceSensor(SensorEntity):
-    def __init__(self, coordinator, service_id, service_name):
+    def __init__(self, coordinator, unique_key, sensor_name):
         """Initialize the sensor."""
         self.coordinator = coordinator
-        self.service_id = service_id
-        self.service_name = service_name
+        self.unique_key = unique_key
+        self.sensor_name = sensor_name
         self._state = None
 
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"PagerDuty {self.service_name}"
+        return self.sensor_name
 
     @property
     def unique_id(self):
         """Return a unique ID to use for this sensor."""
-        return f"pagerduty_{self.service_id}"
+        return f"{self.unique_key}"
 
     @property
     def state_class(self):
@@ -125,4 +65,6 @@ class PagerDutyServiceSensor(SensorEntity):
         return {
             "acknowledged_count": service_data.get("acknowledged_count", 0),
             "triggered_count": service_data.get("triggered_count", 0),
+            "high_urgency_count": service_data.get("high_urgency_count", 0),
+            "low_urgency_count": service_data.get("low_urgency_count", 0),
         }
