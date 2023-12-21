@@ -42,6 +42,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         """Fetch on-call data from PagerDuty."""
         try:
             _LOGGER.debug("Fetching PagerDuty on-call data")
+            params = {"user_ids[]": user_id}
             on_calls = await self.hass.async_add_executor_job(
                 fetch_on_call_data_wrapper, self.session, user_id
             )
@@ -54,9 +55,9 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                 start = on_call.get("start")
                 end = on_call.get("end")
 
-                if start and isinstance(start, str):
+                if start:
                     start = datetime.datetime.fromisoformat(start)
-                if end and isinstance(end, str):
+                if end:
                     end = datetime.datetime.fromisoformat(end)
 
                 if start and start > current_time:
@@ -64,10 +65,16 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                         closest_on_call_start = start
                         closest_on_call = on_call
 
+                schedule_id = None
+                schedule_name = None
+                if on_call.get("schedule"):
+                    schedule_id = on_call["schedule"].get("id")
+                    schedule_name = on_call["schedule"].get("summary")
+
                 on_call_data.append(
                     {
-                        "schedule_id": on_call.get("schedule", {}).get("id"),
-                        "schedule_name": on_call.get("schedule", {}).get("summary"),
+                        "schedule_id": schedule_id,
+                        "schedule_name": schedule_name,
                         "start": start,
                         "end": end,
                         "escalation_level": on_call.get("escalation_level"),
@@ -75,15 +82,27 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                 )
 
             if closest_on_call:
-                # Add closest on-call to the data
+                closest_schedule_id = (
+                    closest_on_call["schedule"].get("id")
+                    if closest_on_call.get("schedule")
+                    else None
+                )
+                closest_schedule_name = (
+                    closest_on_call["schedule"].get("summary")
+                    if closest_on_call.get("schedule")
+                    else None
+                )
+                closest_start = closest_on_call_start if closest_on_call_start else None
+                closest_end = (
+                    closest_on_call.get("end") if closest_on_call.get("end") else None
+                )
+
                 on_call_data.append(
                     {
-                        "schedule_id": closest_on_call.get("schedule", {}).get("id"),
-                        "schedule_name": closest_on_call.get("schedule", {}).get(
-                            "summary"
-                        ),
-                        "start": closest_on_call_start,
-                        "end": closest_on_call.get("end"),
+                        "schedule_id": closest_schedule_id,
+                        "schedule_name": closest_schedule_name,
+                        "start": closest_start,
+                        "end": closest_end,
                         "escalation_level": closest_on_call.get("escalation_level"),
                         "is_closest": True,
                     }
