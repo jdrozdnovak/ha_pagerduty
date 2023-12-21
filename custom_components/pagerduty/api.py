@@ -34,9 +34,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         async def fetch_on_call_data():
             try:
                 _LOGGER.debug("Fetching PagerDuty on-call data")
-                on_calls = await self.hass.async_add_executor_job(
-                    self.session.list_all, "oncalls", params={"user_ids[]": "me"}
-                )
+                on_calls = self.session.list_all("oncalls", {"user_ids[]": "me"})
                 on_call_data = []
                 for on_call in on_calls:
                     start = datetime.datetime.fromisoformat(on_call["start"])
