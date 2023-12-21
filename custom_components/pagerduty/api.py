@@ -46,7 +46,8 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
                 fetch_user_teams_wrapper, self.session
             )
             user_id = user_info["id"]
-            team_ids = [team["id"] for team in user_info["teams"]]
+            teams_data = user_info["user"]["teams"]
+            team_ids = [(team["id"], team["name"]) for team in teams_data]
             return user_id, team_ids
         except PDClientError as e:
             _LOGGER.error("Error fetching user teams from PagerDuty: %s", e)
@@ -56,7 +57,6 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         """Fetch on-call data from PagerDuty."""
         try:
             _LOGGER.debug("Fetching PagerDuty on-call data")
-            params = {"user_ids[]": user_id}
             on_calls = await self.hass.async_add_executor_job(
                 fetch_on_call_data_wrapper, self.session, user_id
             )
@@ -133,7 +133,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         on_call_data = await self.fetch_on_call_data(user_id)
 
         parsed_data = {}
-        for team_id in user_teams:
+        for team_id, team_name in user_teams:
             _LOGGER.debug("Fetching PagerDuty services for team ID: %s", team_id)
             services = await self.hass.async_add_executor_job(
                 fetch_services_wrapper, self.session, team_id
@@ -163,6 +163,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
 
                 parsed_data[service_id] = {
                     "team_id": team_id,
+                    "team_name": team_name,
                     "service_name": service_name,
                     "triggered_count": triggered_count,
                     "acknowledged_count": acknowledged_count,
