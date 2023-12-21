@@ -6,6 +6,15 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+
+def fetch_user_teams_wrapper(session):
+    return session.list_all("users/me", params={"include[]": "teams"})
+
+
+def fetch_on_call_data_wrapper(session, user_id):
+    return session.list_all("oncalls", params={"user_ids[]": user_id})
+
+
 class PagerDutyDataCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the PagerDuty API."""
 
@@ -19,9 +28,8 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         """Fetch user teams from PagerDuty."""
         try:
             _LOGGER.debug("Fetching PagerDuty user teams")
-            params = {"include[]": "teams"}
             user_info = await self.hass.async_add_executor_job(
-                self.session.rget, "users/me", params=params
+                fetch_user_teams_wrapper, self.session
             )
             user_id = user_info["user"]["id"]
             team_ids = [team["id"] for team in user_info["teams"]]
@@ -34,9 +42,8 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         """Fetch on-call data from PagerDuty."""
         try:
             _LOGGER.debug("Fetching PagerDuty on-call data")
-            params = {"user_ids[]": user_id}
             on_calls = await self.hass.async_add_executor_job(
-                self.session.list_all, "oncalls", params=params
+                fetch_on_call_data_wrapper, self.session, user_id
             )
             on_call_data = []
             for on_call in on_calls:
@@ -60,7 +67,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         """Fetch data from the PagerDuty API."""
         user_id, user_teams = await self.fetch_user_teams()
         on_call_data = await self.fetch_on_call_data(user_id)
-        
+
         parsed_data = {}
         for team_id in user_teams:
             _LOGGER.debug("Fetching PagerDuty services for team ID: %s", team_id)
