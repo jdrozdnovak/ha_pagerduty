@@ -10,10 +10,12 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the PagerDuty binary sensor from a config entry."""
+    _LOGGER.debug("Setting up PagerDuty binary sensor")
     api_token = config_entry.data.get(CONF_API_TOKEN)
     coordinator = PagerDutyDataCoordinator(hass, api_token, UPDATE_INTERVAL)
     await coordinator.async_config_entry_first_refresh()
     async_add_entities([PagerDutyOnCallSensor(coordinator)], False)
+    _LOGGER.debug("PagerDuty binary sensor setup complete")
 
 
 class PagerDutyOnCallSensor(BinarySensorEntity):
@@ -21,6 +23,7 @@ class PagerDutyOnCallSensor(BinarySensorEntity):
 
     def __init__(self, coordinator):
         """Initialize the binary sensor."""
+        _LOGGER.debug("Initializing PagerDuty On-Call Binary Sensor")
         self.coordinator = coordinator
         self._state = STATE_OFF
         self._next_on_call = None
@@ -40,24 +43,10 @@ class PagerDutyOnCallSensor(BinarySensorEntity):
         """Return the state of the binary sensor."""
         return self._state == STATE_ON
 
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes of the binary sensor."""
-        return {"next_on_call": self._next_on_call}
-
     async def async_update(self):
         """Update the binary sensor."""
-        current_time = datetime.now()
-        on_calls = self.coordinator.data.get("on_calls", [])
-        self._state = STATE_OFF
-        self._next_on_call = None
-        for on_call in on_calls:
-            start = on_call["start"]
-            end = on_call["end"]
-            if start <= current_time <= end:
-                self._state = STATE_ON
-                break
-            elif start > current_time and (
-                self._next_on_call is None or start < self._next_on_call
-            ):
-                self._next_on_call = start
+        _LOGGER.debug("Updating PagerDuty On-Call Binary Sensor")
+        self._state = STATE_ON if self.coordinator.data else STATE_OFF
+        _LOGGER.debug(
+            f"PagerDuty On-Call Binary Sensor state updated to: {'ON' if self._state == STATE_ON else 'OFF'}"
+        )
