@@ -26,6 +26,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 class PagerDutyServiceSensor(SensorEntity):
     def __init__(self, coordinator, unique_key, sensor_name):
+        _LOGGER.debug(f"Initializing PagerDutyServiceSensor: {sensor_name}")
         """Initialize the sensor."""
         self.coordinator = coordinator
         self.unique_key = unique_key
