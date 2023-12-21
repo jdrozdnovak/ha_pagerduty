@@ -19,8 +19,9 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
         """Fetch user teams from PagerDuty."""
         try:
             _LOGGER.debug("Fetching PagerDuty user teams")
+            params = {"include[]": "teams"}
             user_info = await self.hass.async_add_executor_job(
-                self.session.list_all, "users/me", params={"include[]": "teams"}
+                self.session.rget, "users/me", params=params
             )
             user_id = user_info["user"]["id"]
             team_ids = [team["id"] for team in user_info["teams"]]
