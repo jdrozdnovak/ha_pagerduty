@@ -8,7 +8,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def fetch_user_teams_wrapper(session):
-    return session.list_all("users/me", params={"include[]": "teams"})
+    return session.rget("users/me", params={"include[]": "teams"})
 
 
 def fetch_on_call_data_wrapper(session, user_id):
@@ -31,7 +31,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
             user_info = await self.hass.async_add_executor_job(
                 fetch_user_teams_wrapper, self.session
             )
-            user_id = user_info["user"]["id"]
+            user_id = user_info["id"]
             team_ids = [team["id"] for team in user_info["teams"]]
             return user_id, team_ids
         except PDClientError as e:
