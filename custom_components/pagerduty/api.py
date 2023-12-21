@@ -24,7 +24,7 @@ class PagerDutyDataCoordinator(DataUpdateCoordinator):
             try:
                 _LOGGER.debug("Fetching PagerDuty user teams")
                 user_info = await self.hass.async_add_executor_job(
-                    self.session.rget, "users/me", params={"include[]": "teams"}
+                    self.session.list_all, "users/me", {"include[]": "teams"}
                 )
                 return [team["id"] for team in user_info["teams"]]
             except PDClientError as e:
