@@ -8,6 +8,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+
 def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the PagerDuty integration."""
     _LOGGER.debug("Setting up PagerDuty integration")
@@ -22,6 +23,6 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data[DOMAIN] = {CONF_API_KEY: api_key}
 
     _LOGGER.debug("Loading PagerDuty binary sensor platform")
-    hass.helpers.discovery.load_platform('binary_sensor', DOMAIN, {}, config)
+    hass.helpers.discovery.load_platform("binary_sensor", DOMAIN, {}, config)
 
     return True

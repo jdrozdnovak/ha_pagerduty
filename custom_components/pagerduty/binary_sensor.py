@@ -4,14 +4,15 @@ import logging
 from datetime import timedelta
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
-    DEVICE_CLASS_OCCUPANCY
+    DEVICE_CLASS_OCCUPANCY,
 )
 from homeassistant.const import CONF_API_KEY
 from pdpyras import APISession
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-SCAN_INTERVAL = timedelta(minutes=5)  # Update every 5 minutes
+SCAN_INTERVAL = timedelta(minutes=1)  # Update every 5 minutes
+
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the PagerDuty binary sensor."""
@@ -20,6 +21,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     api_key = hass.data[DOMAIN][CONF_API_KEY]
     session = APISession(api_key)
     add_entities([PagerDutyBinarySensor(session)], True)
+
 
 class PagerDutyBinarySensor(BinarySensorEntity):
     """Representation of a PagerDuty Binary Sensor."""
@@ -51,10 +53,10 @@ class PagerDutyBinarySensor(BinarySensorEntity):
         _LOGGER.debug("Updating PagerDuty binary sensor state")
 
         try:
-            user = self.session.rget('/users/me')
-            user_id = user.get('id', None)
-            on_calls = self.session.rget('oncalls', params={"user_ids[]":user_id})
-            if 'oncalls' in on_calls and on_calls['oncalls']:
+            user = self.session.rget("/users/me")
+            user_id = user.get("id", None)
+            on_calls = self.session.rget("oncalls", params={"user_ids[]": user_id})
+            if on_calls:
                 self._is_on_call = True
             else:
                 self._is_on_call = False
