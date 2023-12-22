@@ -16,25 +16,26 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     _LOGGER.debug("Setting up PagerDuty incident sensors")
 
-    # Aggregate incidents by team and service
-    incidents_by_team_service = defaultdict(lambda: defaultdict(list))
-    for team_id, incidents in coordinator.data["incidents"].items():
-        _LOGGER.debug(f"Processing incidents for team {team_id}")
-        for incident in incidents:
-            service_id = incident["service"]["id"]
-            incidents_by_team_service[team_id][service_id].append(incident)
-            _LOGGER.debug(f"Added incident {incident['id']} for service {service_id}")
+    # Retrieve all teams and services, and their respective incidents
+    teams = coordinator.data["teams"]
+    all_incidents = coordinator.data["incidents"]
 
-    # Create sensors
-    for team_id, services in incidents_by_team_service.items():
-        team_name = coordinator.data["teams"].get(team_id)
-        for service_id, incidents in services.items():
-            service_name = incidents[0]["service"]["summary"]
+    for team_id, team_name in teams.items():
+        _LOGGER.debug(f"Processing team {team_name} (ID: {team_id})")
+        services_with_incidents = defaultdict(list, all_incidents.get(team_id, {}))
+
+        # Go through all services within the team
+        for service_id, incidents in services_with_incidents.items():
+            service_name = (
+                incidents[0]["service"]["summary"] if incidents else "Unknown Service"
+            )
             sensor = PagerDutyIncidentSensor(
                 coordinator, team_id, team_name, service_id, service_name, incidents
             )
             sensors.append(sensor)
-            _LOGGER.debug(f"Created sensor for service {service_id} in team {team_id}")
+            _LOGGER.debug(
+                f"Created sensor for service {service_id} in team {team_id} with {len(incidents)} incidents"
+            )
 
     add_entities(sensors, True)
 
