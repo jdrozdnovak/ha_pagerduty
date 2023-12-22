@@ -32,7 +32,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         "session": session,
     }
 
-    _LOGGER.debug("Loading PagerDuty binary sensor platform")
+    # Load binary sensor and sensor platforms
+    _LOGGER.debug("Loading PagerDuty platforms")
     hass.helpers.discovery.load_platform("binary_sensor", DOMAIN, {}, config)
+    hass.helpers.discovery.load_platform("sensor", DOMAIN, {}, config)
 
     return True
