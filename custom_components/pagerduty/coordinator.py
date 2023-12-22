@@ -12,7 +12,6 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize."""
         self.session = session
         self.teams = {}  # Stores team IDs and names
-
         update_interval = timedelta(minutes=1)
         super().__init__(
             hass, _LOGGER, name="PagerDuty", update_interval=update_interval
@@ -22,24 +21,19 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         """Fetch data from API."""
         try:
             _LOGGER.debug("Fetching user information from PagerDuty")
-            user = await self.hass.async_add_executor_job(self.fetch_user, self.session)
-
-            # Extract and store team information
+            user = await self.hass.async_add_executor_job(self.fetch_user)
             self.teams = {team["id"]: team["name"] for team in user.get("teams", [])}
-            _LOGGER.debug(f"Teams: {self.teams}")
 
-            # Fetch on-call data
-            _LOGGER.debug("Fetching on-call data")
+            _LOGGER.debug(f"Teams: {self.teams}")
             on_calls = await self.hass.async_add_executor_job(
-                self.fetch_on_calls, self.session, user.get("id")
+                self.fetch_on_calls, user.get("id")
             )
 
-            # Fetch incidents for each team
             incidents = {}
             for team_id in self.teams.keys():
                 _LOGGER.debug(f"Fetching incidents for team {team_id}")
                 team_incidents = await self.hass.async_add_executor_job(
-                    self.fetch_incidents, self.session, team_id
+                    self.fetch_incidents, team_id
                 )
                 incidents[team_id] = team_incidents
 
@@ -49,17 +43,17 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.error(f"Error communicating with PagerDuty API: {e}")
             raise UpdateFailed(f"Error communicating with API: {e}")
 
-    def fetch_user(session):
+    def fetch_user(self):
         """Fetch user data."""
-        return session.rget("/users/me", params={"include[]": "teams"})
+        return self.session.rget("/users/me", params={"include[]": "teams"})
 
-    def fetch_on_calls(session, user_id):
+    def fetch_on_calls(self, user_id):
         """Fetch on-call data."""
-        return session.rget("oncalls", params={"user_ids[]": user_id})
+        return self.session.rget("oncalls", params={"user_ids[]": user_id})
 
-    def fetch_incidents(session, team_id):
+    def fetch_incidents(self, team_id):
         """Fetch incidents for a team."""
-        return session.list_all(
+        return self.session.list_all(
             "incidents",
             params={"team_ids[]": team_id, "statuses[]": ["acknowledged", "triggered"]},
         )
