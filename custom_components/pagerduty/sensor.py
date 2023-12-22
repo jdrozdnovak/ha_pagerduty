@@ -36,8 +36,6 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
 
 class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
-    """Representation of a PagerDuty Incident Sensor."""
-
     def __init__(
         self, coordinator, team_id, team_name, service_id, service_name, incidents
     ):
@@ -48,6 +46,12 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         self._incidents = incidents
         self._attr_name = f"PagerDuty {team_name} - {service_name}"
         self._attr_unique_id = f"{team_id}-{service_id}"
+
+        # Add a debug statement to log the structure of the first incident
+        if incidents:
+            _LOGGER.debug(f"First incident structure: {incidents[0]}")
+        else:
+            _LOGGER.debug("No incidents for this sensor")
 
         _LOGGER.debug(f"Initializing PagerDuty incident sensor: {self._attr_name}")
 
@@ -67,8 +71,11 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         urgency_counts = defaultdict(int)
         status_counts = defaultdict(int)
         for incident in self._incidents:
-            urgency_counts[incident["urgency"]] += 1
-            status_counts[incident["status"]] += 1
+            if isinstance(incident, dict):
+                urgency_counts[incident.get("urgency", "unknown")] += 1
+                status_counts[incident.get("status", "unknown")] += 1
+            else:
+                _LOGGER.error(f"Incorrect incident data format: {incident}")
 
         return {
             "urgency_low": urgency_counts["low"],
