@@ -16,13 +16,13 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     _LOGGER.debug("Setting up PagerDuty incident sensors")
 
-    # Retrieve all teams and services, and their respective incidents
+    # Retrieve all teams and their respective incidents
     teams = coordinator.data["teams"]
     all_incidents = coordinator.data["incidents"]
 
     for team_id, team_name in teams.items():
         _LOGGER.debug(f"Processing team {team_name} (ID: {team_id})")
-        services_with_incidents = defaultdict(list, all_incidents.get(team_id, {}))
+        services_with_incidents = all_incidents.get(team_id, defaultdict(list))
 
         # Go through all services within the team
         for service_id, incidents in services_with_incidents.items():
