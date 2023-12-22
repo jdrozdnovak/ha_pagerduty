@@ -19,9 +19,11 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     # Aggregate incidents by team and service
     incidents_by_team_service = defaultdict(lambda: defaultdict(list))
     for team_id, incidents in coordinator.data["incidents"].items():
+        _LOGGER.debug(f"Processing incidents for team {team_id}")
         for incident in incidents:
             service_id = incident["service"]["id"]
             incidents_by_team_service[team_id][service_id].append(incident)
+            _LOGGER.debug(f"Added incident {incident['id']} for service {service_id}")
 
     # Create sensors
     for team_id, services in incidents_by_team_service.items():
@@ -32,6 +34,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
                 coordinator, team_id, team_name, service_id, service_name, incidents
             )
             sensors.append(sensor)
+            _LOGGER.debug(f"Created sensor for service {service_id} in team {team_id}")
 
     add_entities(sensors, True)
 
