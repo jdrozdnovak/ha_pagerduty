@@ -55,7 +55,10 @@ class PagerDutyBinarySensor(BinarySensorEntity):
             user_id = user.get('id', None)
             if user_id:
                 on_calls = self.session.rget(f'/oncalls?user_ids[]={user_id}')
-                self._is_on_call = bool(on_calls.get('oncalls'))
+                if isinstance(on_calls, dict):
+                    self._is_on_call = bool(on_calls.get('oncalls'))
+                else:
+                    self._is_on_call = False
             else:
                 self._is_on_call = False
             _LOGGER.debug(f"PagerDuty binary sensor state updated: {self._is_on_call}")
