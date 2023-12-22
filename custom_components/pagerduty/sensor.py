@@ -54,34 +54,23 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
 
     @property
     def state(self):
-        """Return the state of the sensor (number of triggered or acknowledged incidents)."""
-        return sum(
-            1
-            for incident in self._incidents
-            if incident["status"] in ["triggered", "acknowledged"]
-        )
+        """Return the state of the sensor (total count of incidents)."""
+        return len(self._incidents)
 
     @property
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
-        urgency_low = sum(
-            1 for incident in self._incidents if incident["urgency"] == "low"
-        )
-        urgency_high = sum(
-            1 for incident in self._incidents if incident["urgency"] == "high"
-        )
-        status_triggered = sum(
-            1 for incident in self._incidents if incident["status"] == "triggered"
-        )
-        status_acknowledged = sum(
-            1 for incident in self._incidents if incident["status"] == "acknowledged"
-        )
+        urgency_counts = defaultdict(int)
+        status_counts = defaultdict(int)
+        for incident in self._incidents:
+            urgency_counts[incident["urgency"]] += 1
+            status_counts[incident["status"]] += 1
 
         return {
-            "urgency_low": urgency_low,
-            "urgency_high": urgency_high,
-            "status_triggered": status_triggered,
-            "status_acknowledged": status_acknowledged,
+            "urgency_low": urgency_counts["low"],
+            "urgency_high": urgency_counts["high"],
+            "status_triggered": status_counts["triggered"],
+            "status_acknowledged": status_counts["acknowledged"],
         }
 
     def update(self):
