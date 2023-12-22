@@ -16,32 +16,21 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     _LOGGER.debug("Setting up PagerDuty incident sensors")
 
-    # Retrieve all teams and their respective incidents
     teams = coordinator.data["teams"]
-    all_incidents = coordinator.data["incidents"]
+    incidents_data = coordinator.data["incidents"]
+    services_data = coordinator.data["services"]
 
     for team_id, team_name in teams.items():
-        _LOGGER.debug(f"Processing team {team_name} (ID: {team_id})")
-        team_incidents = all_incidents.get(team_id, [])
+        team_services = services_data.get(team_id, {})
+        team_incidents = incidents_data.get(team_id, defaultdict(list))
 
-        # Create a dictionary to aggregate incidents by service
-        incidents_by_service = defaultdict(list)
-        for incident in team_incidents:
-            service_id = incident["service"]["id"]
-            incidents_by_service[service_id].append(incident)
-
-        # Go through all aggregated incidents per service
-        for service_id, incidents in incidents_by_service.items():
-            service_name = (
-                incidents[0]["service"]["summary"] if incidents else "Unknown Service"
-            )
+        for service_id, service in team_services.items():
+            service_name = service["summary"]
+            incidents = team_incidents[service_id]
             sensor = PagerDutyIncidentSensor(
                 coordinator, team_id, team_name, service_id, service_name, incidents
             )
             sensors.append(sensor)
-            _LOGGER.debug(
-                f"Created sensor for service {service_id} in team {team_id} with {len(incidents)} incidents"
-            )
 
     add_entities(sensors, True)
 

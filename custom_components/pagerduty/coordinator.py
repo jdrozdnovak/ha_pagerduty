@@ -1,6 +1,7 @@
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from datetime import timedelta
 import logging
+from collections import defaultdict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,25 +21,36 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Fetch data from API."""
         try:
-            _LOGGER.debug("Fetching user information from PagerDuty")
             user = await self.hass.async_add_executor_job(self.fetch_user)
             self.teams = {team["id"]: team["name"] for team in user.get("teams", [])}
 
-            _LOGGER.debug(f"Teams: {self.teams}")
             on_calls = await self.hass.async_add_executor_job(
                 self.fetch_on_calls, user.get("id")
             )
 
             incidents = {}
+            services = {}
             for team_id in self.teams.keys():
-                _LOGGER.debug(f"Fetching incidents for team {team_id}")
+                team_services = await self.hass.async_add_executor_job(
+                    self.fetch_services, team_id
+                )
+                services[team_id] = {
+                    service["id"]: service for service in team_services
+                }
+
                 team_incidents = await self.hass.async_add_executor_job(
                     self.fetch_incidents, team_id
                 )
-                incidents[team_id] = team_incidents
+                incidents[team_id] = defaultdict(
+                    list, {inc["service"]["id"]: inc for inc in team_incidents}
+                )
 
-            _LOGGER.debug(f"Received incidents: {incidents}")
-            return {"teams": self.teams, "on_calls": on_calls, "incidents": incidents}
+            return {
+                "teams": self.teams,
+                "on_calls": on_calls,
+                "incidents": incidents,
+                "services": services,
+            }
         except Exception as e:
             _LOGGER.error(f"Error communicating with PagerDuty API: {e}")
             raise UpdateFailed(f"Error communicating with API: {e}")
@@ -57,3 +69,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             "incidents",
             params={"team_ids[]": team_id, "statuses[]": ["acknowledged", "triggered"]},
         )
+
+    def fetch_services(self, team_id):
+        """Fetch services for a team."""
+        return self.session.list_all("services", params={"team_ids[]": team_id})
