@@ -22,10 +22,16 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     for team_id, team_name in teams.items():
         _LOGGER.debug(f"Processing team {team_name} (ID: {team_id})")
-        services_with_incidents = all_incidents.get(team_id, defaultdict(list))
+        team_incidents = all_incidents.get(team_id, [])
 
-        # Go through all services within the team
-        for service_id, incidents in services_with_incidents.items():
+        # Create a dictionary to aggregate incidents by service
+        incidents_by_service = defaultdict(list)
+        for incident in team_incidents:
+            service_id = incident["service"]["id"]
+            incidents_by_service[service_id].append(incident)
+
+        # Go through all aggregated incidents per service
+        for service_id, incidents in incidents_by_service.items():
             service_name = (
                 incidents[0]["service"]["summary"] if incidents else "Unknown Service"
             )
