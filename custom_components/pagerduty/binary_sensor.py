@@ -1,52 +1,64 @@
+"""PagerDuty Binary Sensor for Home Assistant."""
+
 import logging
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.const import STATE_ON, STATE_OFF
-from .api import PagerDutyDataCoordinator
-from datetime import datetime
-from .const import UPDATE_INTERVAL, CONF_API_TOKEN
+from datetime import timedelta
+from homeassistant.components.binary_sensor import (
+    BinarySensorEntity,
+    DEVICE_CLASS_OCCUPANCY
+)
+from homeassistant.const import CONF_API_KEY
+from pdpyras import APISession
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+SCAN_INTERVAL = timedelta(minutes=5)  # Update every 5 minutes
 
+def setup_platform(hass, config, add_entities, discovery_info=None):
+    """Set up the PagerDuty binary sensor."""
+    _LOGGER.debug("Setting up PagerDuty binary sensor platform")
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the PagerDuty binary sensor from a config entry."""
-    _LOGGER.debug("Setting up PagerDuty binary sensor")
-    api_token = config_entry.data.get(CONF_API_TOKEN)
-    coordinator = PagerDutyDataCoordinator(hass, api_token, UPDATE_INTERVAL)
-    await coordinator.async_config_entry_first_refresh()
-    async_add_entities([PagerDutyOnCallSensor(coordinator)], False)
-    _LOGGER.debug("PagerDuty binary sensor setup complete")
+    api_key = hass.data[DOMAIN][CONF_API_KEY]
+    session = APISession(api_key)
+    add_entities([PagerDutyBinarySensor(session)], True)
 
+class PagerDutyBinarySensor(BinarySensorEntity):
+    """Representation of a PagerDuty Binary Sensor."""
 
-class PagerDutyOnCallSensor(BinarySensorEntity):
-    """Representation of a PagerDuty On-Call Binary Sensor."""
-
-    def __init__(self, coordinator):
-        """Initialize the binary sensor."""
-        _LOGGER.debug("Initializing PagerDuty On-Call Binary Sensor")
-        self.coordinator = coordinator
-        self._state = STATE_OFF
-        self._next_on_call = None
+    def __init__(self, session):
+        """Initialize the sensor."""
+        _LOGGER.debug("Initializing PagerDuty binary sensor")
+        self.session = session
+        self._is_on_call = False
+        self._name = "PagerDuty On Call Status"
 
     @property
     def name(self):
-        """Return the name of the binary sensor."""
-        return "PagerDuty On-Call"
-
-    @property
-    def unique_id(self):
-        """Return a unique ID."""
-        return "pagerduty_on_call_sensor"
+        """Return the name of the sensor."""
+        return self._name
 
     @property
     def is_on(self):
-        """Return the state of the binary sensor."""
-        return self._state == STATE_ON
+        """Return true if the binary sensor is on."""
+        return self._is_on_call
 
-    async def async_update(self):
-        """Update the binary sensor."""
-        _LOGGER.debug("Updating PagerDuty On-Call Binary Sensor")
-        self._state = STATE_ON if self.coordinator.data else STATE_OFF
-        _LOGGER.debug(
-            f"PagerDuty On-Call Binary Sensor state updated to: {'ON' if self._state == STATE_ON else 'OFF'}"
-        )
+    @property
+    def device_class(self):
+        """Return the class of this device."""
+        return DEVICE_CLASS_OCCUPANCY
+
+    def update(self):
+        """Fetch new state data for the sensor."""
+        _LOGGER.debug("Updating PagerDuty binary sensor state")
+
+        try:
+            user = self.session.rget('/users/me')
+            user_id = user.get('id', None)
+            if user_id:
+                on_calls = self.session.rget(f'/oncalls?user_ids[]={user_id}')
+                self._is_on_call = bool(on_calls.get('oncalls'))
+            else:
+                self._is_on_call = False
+            _LOGGER.debug(f"PagerDuty binary sensor state updated: {self._is_on_call}")
+        except Exception as e:
+            _LOGGER.error(f"Error updating PagerDuty sensor: {e}")
+            self._is_on_call = False
