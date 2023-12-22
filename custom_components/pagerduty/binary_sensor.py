@@ -46,7 +46,8 @@ class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity):
 
     def update(self):
         """Fetch new state data for the sensor."""
-        _LOGGER.debug(f"All data from coordinator {self.coordinator.data}")
-        on_calls = self.coordinator.data["on_calls"]
-        _LOGGER.debug(f"Oncall data {on_calls}")
+        _LOGGER.debug("Updating PagerDuty binary sensor state")
+
+        on_calls = self.coordinator.data.get("on_calls", [])
         self._is_on_call = bool(on_calls)
+        _LOGGER.debug(f"Binary sensor on-call status: {self._is_on_call}")

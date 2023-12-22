@@ -61,6 +61,11 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         return len(self._incidents)
 
     @property
+    def unit_of_measurement(self):
+        """Return the unit of measurement."""
+        return "incidents"
+
+    @property
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
         urgency_counts = defaultdict(int)
