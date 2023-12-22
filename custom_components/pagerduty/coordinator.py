@@ -18,13 +18,11 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             hass, _LOGGER, name="PagerDuty", update_interval=update_interval
         )
 
-    async def async_update_data(self):
+    async def _async_update_data(self):
         """Fetch data from API."""
         try:
             _LOGGER.debug("Fetching user information from PagerDuty")
-            user = await self.hass.async_add_executor_job(
-                self.session.rget, "/users/me", params={"include[]": "teams"}
-            )
+            user = await self.hass.async_add_executor_job(self.fetch_user, self.session)
 
             # Extract and store team information
             self.teams = {team["id"]: team["name"] for team in user.get("teams", [])}
@@ -33,7 +31,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             # Fetch on-call data
             _LOGGER.debug("Fetching on-call data")
             on_calls = await self.hass.async_add_executor_job(
-                self.session.rget, "oncalls", params={"user_ids[]": user.get("id")}
+                self.fetch_on_calls, self.session, user.get("id")
             )
 
             # Fetch incidents for each team
@@ -41,12 +39,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             for team_id in self.teams.keys():
                 _LOGGER.debug(f"Fetching incidents for team {team_id}")
                 team_incidents = await self.hass.async_add_executor_job(
-                    self.session.list_all,
-                    "incidents",
-                    params={
-                        "team_ids[]": team_id,
-                        "statuses[]": ["acknowledged", "triggered"],
-                    },
+                    self.fetch_incidents, self.session, team_id
                 )
                 incidents[team_id] = team_incidents
 
@@ -55,3 +48,18 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         except Exception as e:
             _LOGGER.error(f"Error communicating with PagerDuty API: {e}")
             raise UpdateFailed(f"Error communicating with API: {e}")
+
+    def fetch_user(session):
+        """Fetch user data."""
+        return session.rget("/users/me", params={"include[]": "teams"})
+
+    def fetch_on_calls(session, user_id):
+        """Fetch on-call data."""
+        return session.rget("oncalls", params={"user_ids[]": user_id})
+
+    def fetch_incidents(session, team_id):
+        """Fetch incidents for a team."""
+        return session.list_all(
+            "incidents",
+            params={"team_ids[]": team_id, "statuses[]": ["acknowledged", "triggered"]},
+        )
