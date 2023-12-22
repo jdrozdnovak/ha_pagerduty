@@ -10,12 +10,14 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the PagerDuty binary sensor."""
     _LOGGER.debug("Setting up PagerDuty binary sensor platform")
 
     coordinator = hass.data[DOMAIN]["coordinator"]
     add_entities([PagerDutyBinarySensor(coordinator)], True)
+
 
 class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity):
     """Representation of a PagerDuty Binary Sensor."""

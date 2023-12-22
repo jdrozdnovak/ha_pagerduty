@@ -10,6 +10,7 @@ from pdpyras import APISession
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the PagerDuty integration."""
     _LOGGER.debug("Setting up PagerDuty integration")
