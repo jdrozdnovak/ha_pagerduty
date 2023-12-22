@@ -21,6 +21,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     services_data = coordinator.data["services"]
 
     for team_id, team_name in teams.items():
+        _LOGGER.debug(f"Processing team {team_name} (ID: {team_id})")
         team_services = services_data.get(team_id, {})
         team_incidents = incidents_data.get(team_id, defaultdict(list))
 
@@ -31,6 +32,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
                 coordinator, team_id, team_name, service_id, service_name, incidents
             )
             sensors.append(sensor)
+            _LOGGER.debug(
+                f"Created sensor for service {service_id} in team {team_id} with {len(incidents)} incidents"
+            )
 
     add_entities(sensors, True)
 
