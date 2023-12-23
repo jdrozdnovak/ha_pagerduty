@@ -21,29 +21,29 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     for service in services_data:
         service_id = service["id"]
-        service_name = service["summary"]  # Corrected here from 'summay' to 'summary'
+        service_name = service["summary"]
+        team_name = service.get("team_name", "Unknown")
         incidents = [
             inc for inc in incidents_data if inc["service"]["id"] == service_id
         ]
 
+        sensor_name = f"PD-{team_name}-{service_name}"
         sensor = PagerDutyIncidentSensor(
-            coordinator, service_id, service_name, incidents
+            coordinator, service_id, sensor_name, incidents
         )
         sensors.append(sensor)
-        _LOGGER.debug(
-            f"Created sensor for service {service_id} with {len(incidents)} incidents"
-        )
+        _LOGGER.debug(f"Created sensor {sensor_name} with {len(incidents)} incidents")
 
     add_entities(sensors, True)
 
 
 class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
-    def __init__(self, coordinator, service_id, service_name, incidents):
+    def __init__(self, coordinator, service_id, sensor_name, incidents):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._service_id = service_id
         self._incidents = incidents
-        self._attr_name = f"PagerDuty - {service_name}"
+        self._attr_name = sensor_name
         self._attr_unique_id = f"pagerduty_{service_id}"
 
         _LOGGER.debug(f"Initializing PagerDuty incident sensor: {self._attr_name}")

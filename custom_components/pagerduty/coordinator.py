@@ -11,6 +11,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, session):
         """Initialize."""
         self.session = session
+        self.teams = {}  # Initialize teams attribute
         update_interval = timedelta(minutes=1)
         super().__init__(
             hass, _LOGGER, name="PagerDuty", update_interval=update_interval
@@ -25,7 +26,10 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
                 self.fetch_on_calls, user_id
             )
 
-            team_ids = [team["id"] for team in user.get("teams", [])]
+            # Fetch and store teams from user data
+            self.teams = {team["id"]: team["name"] for team in user.get("teams", [])}
+
+            team_ids = list(self.teams.keys())
             services = await self.hass.async_add_executor_job(
                 self.fetch_services, team_ids
             )
@@ -55,6 +59,10 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         all_services = []
         for team_id in team_ids:
             services = self.session.list_all("services", params={"team_ids[]": team_id})
+            for service in services:
+                service["team_name"] = self.teams.get(
+                    team_id, "Unknown"
+                )  # Add team name
             all_services.extend(services)
         return all_services
 
