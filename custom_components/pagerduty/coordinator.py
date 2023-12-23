@@ -1,7 +1,6 @@
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from datetime import timedelta
 import logging
-from collections import defaultdict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -12,7 +11,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, session):
         """Initialize."""
         self.session = session
-        self.teams = {}  # Stores team IDs and names
+        self.services = {}  # Stores service IDs and details
         update_interval = timedelta(minutes=1)
         super().__init__(
             hass, _LOGGER, name="PagerDuty", update_interval=update_interval
@@ -22,35 +21,20 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         """Fetch data from API."""
         try:
             user = await self.hass.async_add_executor_job(self.fetch_user)
-            self.teams = {team["id"]: team["name"] for team in user.get("teams", [])}
+            team_ids = [team["id"] for team in user.get("teams", [])]
 
-            on_calls = await self.hass.async_add_executor_job(
-                self.fetch_on_calls, user.get("id")
+            # Fetch services for each team
+            services = await self.hass.async_add_executor_job(
+                self.fetch_services, team_ids
             )
 
-            incidents = {}
-            services = {}
-            for team_id in self.teams.keys():
-                team_services = await self.hass.async_add_executor_job(
-                    self.fetch_services, team_id
-                )
-                services[team_id] = {
-                    service["id"]: service for service in team_services
-                }
+            # Fetch incidents for each service
+            service_ids = [service["id"] for service in services]
+            incidents = await self.hass.async_add_executor_job(
+                self.fetch_incidents, service_ids
+            )
 
-                team_incidents = await self.hass.async_add_executor_job(
-                    self.fetch_incidents, team_id
-                )
-                incidents[team_id] = defaultdict(
-                    list, {inc["service"]["id"]: inc for inc in team_incidents}
-                )
-
-            return {
-                "teams": self.teams,
-                "on_calls": on_calls,
-                "incidents": incidents,
-                "services": services,
-            }
+            return {"services": services, "incidents": incidents}
         except Exception as e:
             _LOGGER.error(f"Error communicating with PagerDuty API: {e}")
             raise UpdateFailed(f"Error communicating with API: {e}")
@@ -59,17 +43,24 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         """Fetch user data."""
         return self.session.rget("/users/me", params={"include[]": "teams"})
 
-    def fetch_on_calls(self, user_id):
-        """Fetch on-call data."""
-        return self.session.rget("oncalls", params={"user_ids[]": user_id})
+    def fetch_services(self, team_ids):
+        """Fetch services for given team IDs."""
+        all_services = []
+        for team_id in team_ids:
+            services = self.session.list_all("services", params={"team_ids[]": team_id})
+            all_services.extend(services)
+        return all_services
 
-    def fetch_incidents(self, team_id):
-        """Fetch incidents for a team."""
-        return self.session.list_all(
-            "incidents",
-            params={"team_ids[]": team_id, "statuses[]": ["acknowledged", "triggered"]},
-        )
-
-    def fetch_services(self, team_id):
-        """Fetch services for a team."""
-        return self.session.list_all("services", params={"team_ids[]": team_id})
+    def fetch_incidents(self, service_ids):
+        """Fetch incidents for given service IDs."""
+        all_incidents = []
+        for service_id in service_ids:
+            incidents = self.session.list_all(
+                "incidents",
+                params={
+                    "service_ids[]": service_id,
+                    "statuses[]": ["acknowledged", "triggered"],
+                },
+            )
+            all_incidents.extend(incidents)
+        return all_incidents

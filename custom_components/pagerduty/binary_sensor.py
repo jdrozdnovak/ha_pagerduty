@@ -44,10 +44,11 @@ class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity):
         """Return the class of this device."""
         return DEVICE_CLASS_OCCUPANCY
 
-    def update(self):
+    def _handle_coordinator_update(self):
         """Fetch new state data for the sensor."""
         _LOGGER.debug("Updating PagerDuty binary sensor state")
 
         on_calls = self.coordinator.data.get("on_calls", [])
         self._is_on_call = bool(on_calls)
         _LOGGER.debug(f"Binary sensor on-call status: {self._is_on_call}")
+        super()._handle_coordinator_update()

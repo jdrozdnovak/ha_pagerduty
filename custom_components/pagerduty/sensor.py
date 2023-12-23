@@ -16,46 +16,35 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     _LOGGER.debug("Setting up PagerDuty incident sensors")
 
-    teams = coordinator.data["teams"]
-    incidents_data = coordinator.data["incidents"]
     services_data = coordinator.data["services"]
+    incidents_data = coordinator.data["incidents"]
 
-    for team_id, team_name in teams.items():
-        _LOGGER.debug(f"Processing team {team_name} (ID: {team_id})")
-        team_services = services_data.get(team_id, {})
-        team_incidents = incidents_data.get(team_id, defaultdict(list))
+    for service in services_data:
+        service_id = service["id"]
+        service_name = service["summary"]  # Corrected here from 'summay' to 'summary'
+        incidents = [
+            inc for inc in incidents_data if inc["service"]["id"] == service_id
+        ]
 
-        for service_id, service in team_services.items():
-            service_name = service["summary"]
-            incidents = team_incidents[service_id]
-            sensor = PagerDutyIncidentSensor(
-                coordinator, team_id, team_name, service_id, service_name, incidents
-            )
-            sensors.append(sensor)
-            _LOGGER.debug(
-                f"Created sensor for service {service_id} in team {team_id} with {len(incidents)} incidents"
-            )
+        sensor = PagerDutyIncidentSensor(
+            coordinator, service_id, service_name, incidents
+        )
+        sensors.append(sensor)
+        _LOGGER.debug(
+            f"Created sensor for service {service_id} with {len(incidents)} incidents"
+        )
 
     add_entities(sensors, True)
 
 
 class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
-    def __init__(
-        self, coordinator, team_id, team_name, service_id, service_name, incidents
-    ):
+    def __init__(self, coordinator, service_id, service_name, incidents):
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._team_id = team_id
         self._service_id = service_id
         self._incidents = incidents
-        self._attr_name = f"PagerDuty {team_name} - {service_name}"
-        self._attr_unique_id = f"{team_id}-{service_id}"
-
-        # Add a debug statement to log the structure of the first incident
-        if incidents:
-            _LOGGER.debug(f"First incident structure: {incidents[0]}")
-        else:
-            _LOGGER.debug("No incidents for this sensor")
+        self._attr_name = f"PagerDuty - {service_name}"
+        self._attr_unique_id = f"pagerduty_{service_id}"
 
         _LOGGER.debug(f"Initializing PagerDuty incident sensor: {self._attr_name}")
 
@@ -75,11 +64,10 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         urgency_counts = defaultdict(int)
         status_counts = defaultdict(int)
         for incident in self._incidents:
-            if isinstance(incident, dict):
-                urgency_counts[incident.get("urgency", "unknown")] += 1
-                status_counts[incident.get("status", "unknown")] += 1
-            else:
-                _LOGGER.error(f"Incorrect incident data format: {incident}")
+            urgency = incident.get("urgency", "unknown")
+            status = incident.get("status", "unknown")
+            urgency_counts[urgency] += 1
+            status_counts[status] += 1
 
         return {
             "urgency_low": urgency_counts["low"],
