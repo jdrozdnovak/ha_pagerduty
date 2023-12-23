@@ -25,7 +25,8 @@ class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity):
     def __init__(self, coordinator):
         """Initialize the sensor."""
         _LOGGER.debug("Initializing PagerDuty binary sensor")
-        super().__init__(coordinator)
+        super().__init__(coordinator)  # This line is correct
+        self._coordinator = coordinator  # Store coordinator as an instance variable
         self._is_on_call = False
         self._name = "PagerDuty On Call Status"
 
@@ -48,7 +49,7 @@ class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity):
         """Fetch new state data for the sensor."""
         _LOGGER.debug("Updating PagerDuty binary sensor state")
 
-        on_calls = self.coordinator.data.get("on_calls", [])
+        on_calls = self._coordinator.data.get("on_calls", [])
         self._is_on_call = bool(on_calls)
         _LOGGER.debug(f"Binary sensor on-call status: {self._is_on_call}")
         super()._handle_coordinator_update()

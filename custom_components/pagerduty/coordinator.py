@@ -11,7 +11,6 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, session):
         """Initialize."""
         self.session = session
-        self.services = {}  # Stores service IDs and details
         update_interval = timedelta(minutes=1)
         super().__init__(
             hass, _LOGGER, name="PagerDuty", update_interval=update_interval
@@ -21,20 +20,21 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         """Fetch data from API."""
         try:
             user = await self.hass.async_add_executor_job(self.fetch_user)
-            team_ids = [team["id"] for team in user.get("teams", [])]
+            user_id = user.get("id")
+            on_calls = await self.hass.async_add_executor_job(
+                self.fetch_on_calls, user_id
+            )
 
-            # Fetch services for each team
+            team_ids = [team["id"] for team in user.get("teams", [])]
             services = await self.hass.async_add_executor_job(
                 self.fetch_services, team_ids
             )
-
-            # Fetch incidents for each service
             service_ids = [service["id"] for service in services]
             incidents = await self.hass.async_add_executor_job(
                 self.fetch_incidents, service_ids
             )
 
-            return {"services": services, "incidents": incidents}
+            return {"on_calls": on_calls, "services": services, "incidents": incidents}
         except Exception as e:
             _LOGGER.error(f"Error communicating with PagerDuty API: {e}")
             raise UpdateFailed(f"Error communicating with API: {e}")
@@ -42,6 +42,13 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     def fetch_user(self):
         """Fetch user data."""
         return self.session.rget("/users/me", params={"include[]": "teams"})
+
+    def fetch_on_calls(self, user_id):
+        """Fetch on-call data for the user."""
+        if not user_id:
+            return []
+        params = {"user_ids[]": user_id}
+        return self.session.rget("/oncalls", params=params)
 
     def fetch_services(self, team_ids):
         """Fetch services for given team IDs."""
