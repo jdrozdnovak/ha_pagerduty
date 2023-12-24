@@ -9,9 +9,8 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-# Setup platform remains largely the same, but without passing incidents
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the PagerDuty incident sensors."""
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+    """Set up the PagerDuty incident sensors asynchronously."""
     coordinator = hass.data[DOMAIN]["coordinator"]
     sensors = []
 
@@ -27,7 +26,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         sensor = PagerDutyIncidentSensor(coordinator, service_id, sensor_name)
         sensors.append(sensor)
 
-    add_entities(sensors, True)
+    async_add_entities(sensors, True)
 
 
 class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
@@ -37,13 +36,14 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         self._service_id = service_id
         self._attr_name = sensor_name
         self._attr_unique_id = f"pagerduty_{service_id}"
-        self._incidents = []  # Initialize an empty list for incidents
+        self._incidents = []
 
         _LOGGER.debug(f"Initializing PagerDuty incident sensor: {self._attr_name}")
 
     @property
     def state(self):
         """Return the state of the sensor (total count of incidents)."""
+        _LOGGER.debug(f"Updating state of: {self._attr_name} to {len(self._incidents)}")
         return len(self._incidents)
 
     @property
@@ -70,7 +70,7 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         }
 
     def _handle_coordinator_update(self):
-        """Handle an update from the coordinator."""
+        """Fetch new state data for the sensor asynchronously."""
         _LOGGER.debug(f"Updating PagerDuty incident sensor: {self._attr_name}")
 
         # Fetch new incidents for this service
@@ -80,7 +80,5 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         ]
 
         _LOGGER.debug(f"Updated incidents count: {len(self._incidents)}")
-
-        self.async_write_ha_state()
 
         super()._handle_coordinator_update()
