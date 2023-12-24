@@ -9,6 +9,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
+# Setup platform remains largely the same, but without passing incidents
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the PagerDuty incident sensors."""
     coordinator = hass.data[DOMAIN]["coordinator"]
@@ -17,34 +18,26 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     _LOGGER.debug("Setting up PagerDuty incident sensors")
 
     services_data = coordinator.data["services"]
-    incidents_data = coordinator.data["incidents"]
 
     for service in services_data:
         service_id = service["id"]
         service_name = service["summary"]
         team_name = service.get("team_name", "Unknown")
-        incidents = [
-            inc for inc in incidents_data if inc["service"]["id"] == service_id
-        ]
-
         sensor_name = f"PD-{team_name}-{service_name}"
-        sensor = PagerDutyIncidentSensor(
-            coordinator, service_id, sensor_name, incidents
-        )
+        sensor = PagerDutyIncidentSensor(coordinator, service_id, sensor_name)
         sensors.append(sensor)
-        _LOGGER.debug(f"Created sensor {sensor_name} with {len(incidents)} incidents")
 
     add_entities(sensors, True)
 
 
 class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
-    def __init__(self, coordinator, service_id, sensor_name, incidents):
+    def __init__(self, coordinator, service_id, sensor_name):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._service_id = service_id
-        self._incidents = incidents
         self._attr_name = sensor_name
         self._attr_unique_id = f"pagerduty_{service_id}"
+        self._incidents = []  # Initialize an empty list for incidents
 
         _LOGGER.debug(f"Initializing PagerDuty incident sensor: {self._attr_name}")
 
@@ -76,8 +69,18 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
             "status_acknowledged": status_counts["acknowledged"],
         }
 
-    def update(self):
-        """Update the sensor."""
+    def _handle_coordinator_update(self):
+        """Handle an update from the coordinator."""
         _LOGGER.debug(f"Updating PagerDuty incident sensor: {self._attr_name}")
-        # The update is handled by the CoordinatorEntity
-        pass
+
+        # Fetch new incidents for this service
+        incidents_data = self.coordinator.data["incidents"]
+        self._incidents = [
+            inc for inc in incidents_data if inc["service"]["id"] == self._service_id
+        ]
+
+        _LOGGER.debug(f"Updated incidents count: {len(self._incidents)}")
+
+        self.async_write_ha_state()
+
+        super()._handle_coordinator_update()
