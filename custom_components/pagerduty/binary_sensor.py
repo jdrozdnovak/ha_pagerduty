@@ -33,6 +33,7 @@ class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity):
         self._coordinator = coordinator
         self._is_on_call = False
         self._name = "PagerDuty On Call Status"
+        self._attr_unique_id = "pd_oncall_sensor"
 
     @property
     def name(self):
