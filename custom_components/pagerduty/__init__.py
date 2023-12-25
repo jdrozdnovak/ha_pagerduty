@@ -84,8 +84,20 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the PagerDuty integration from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
+    """Set up the PagerDuty integration."""
+    _LOGGER.debug("Setting up PagerDuty integration")
+
+    if DOMAIN not in config:
+        return True
+
+    hass.async_create_task(
+        hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_IMPORT},
+            data=config[DOMAIN],
+        )
+    )
+
     return True
 
 
