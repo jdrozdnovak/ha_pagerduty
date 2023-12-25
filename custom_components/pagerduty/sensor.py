@@ -26,6 +26,9 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         sensor = PagerDutyIncidentSensor(coordinator, service_id, sensor_name)
         sensors.append(sensor)
 
+    total_incidents_sensor = PagerDutyTotalIncidentsSensor(coordinator)
+    sensors.append(total_incidents_sensor)
+
     async_add_entities(sensors, True)
 
 
@@ -80,5 +83,54 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         ]
 
         _LOGGER.debug(f"Updated incidents count: {len(self._incidents)}")
+
+        super()._handle_coordinator_update()
+
+
+class PagerDutyTotalIncidentsSensor(SensorEntity, CoordinatorEntity):
+    """Define a sensor for the total number of PagerDuty incidents."""
+
+    def __init__(self, coordinator):
+        """Initialize the total incidents sensor."""
+        super().__init__(coordinator)
+        self._attr_name = "PagerDuty Total Incidents"
+        self._attr_unique_id = "pagerduty_total_incidents"
+        self._total_incidents = 0
+
+    @property
+    def state(self):
+        """Return the state of the sensor (total number of incidents)."""
+        return self._total_incidents
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit of measurement."""
+        return "incidents"
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes of the sensor."""
+        urgency_counts = defaultdict(int)
+        status_counts = defaultdict(int)
+        for incident in self.coordinator.data.get("incidents", []):
+            urgency = incident.get("urgency", "unknown")
+            status = incident.get("status", "unknown")
+            urgency_counts[urgency] += 1
+            status_counts[status] += 1
+
+        return {
+            "urgency_low": urgency_counts["low"],
+            "urgency_high": urgency_counts["high"],
+            "status_triggered": status_counts["triggered"],
+            "status_acknowledged": status_counts["acknowledged"],
+        }
+
+    def _handle_coordinator_update(self):
+        """Handle an update from the coordinator."""
+        _LOGGER.debug(f"Updating PagerDuty total incidents sensor")
+
+        self._total_incidents = len(self.coordinator.data.get("incidents", []))
+
+        _LOGGER.debug(f"Total incidents count updated: {self._total_incidents}")
 
         super()._handle_coordinator_update()
