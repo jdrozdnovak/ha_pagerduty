@@ -1,7 +1,7 @@
 """The PagerDuty integration for Home Assistant."""
 
 import logging
-from datetime import timedelta
+from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -15,11 +15,11 @@ _LOGGER = logging.getLogger(__name__)
 class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching PagerDuty data."""
 
-    def __init__(self, hass, session):
+    def __init__(self, hass, session, update_interval=UPDATE_INTERVAL):
         """Initialize."""
         self.session = session
         super().__init__(
-            hass, _LOGGER, name="PagerDuty", update_interval=UPDATE_INTERVAL
+            hass, _LOGGER, name="PagerDuty", update_interval=update_interval
         )
 
     async def _async_update_data(self):
@@ -87,24 +87,49 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the PagerDuty integration."""
     _LOGGER.debug("Setting up PagerDuty integration")
 
-    if DOMAIN in hass.data:
+    if DOMAIN not in config:
         return True
 
-    api_key = config[DOMAIN][CONF_API_KEY]
+    hass.async_create_task(
+        hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_IMPORT},
+            data=config[DOMAIN],
+        )
+    )
+
+    return True
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: config_entries.ConfigEntry
+) -> bool:
+    """Set up PagerDuty from a config entry."""
+    hass.data.setdefault(DOMAIN, {})
+
+    api_key = entry.data[CONF_API_KEY]
+    update_interval = entry.options.get("update_interval", UPDATE_INTERVAL)
+
     session = APISession(api_key)
-    coordinator = PagerDutyDataUpdateCoordinator(hass, session)
+    coordinator = PagerDutyDataUpdateCoordinator(
+        hass, session, update_interval=update_interval
+    )
     await coordinator.async_refresh()
 
-    hass.data[DOMAIN] = {
+    hass.data[DOMAIN][entry.entry_id] = {
         "coordinator": coordinator,
         "session": session,
     }
 
-    hass.async_create_task(
-        hass.helpers.discovery.async_load_platform("binary_sensor", DOMAIN, {}, config)
-    )
-    hass.async_create_task(
-        hass.helpers.discovery.async_load_platform("sensor", DOMAIN, {}, config)
-    )
+    # Corrected platform loading
+    for platform in ["binary_sensor", "sensor"]:
+        hass.async_create_task(
+            hass.helpers.discovery.async_load_platform(
+                platform,
+                DOMAIN,
+                entry.entry_id,
+                {},  # pass entry.entry_id as discovery_info
+            )
+        )
 
     return True
