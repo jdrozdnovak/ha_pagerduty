@@ -125,7 +125,10 @@ async def async_setup_entry(
     for platform in ["binary_sensor", "sensor"]:
         hass.async_create_task(
             hass.helpers.discovery.async_load_platform(
-                platform, DOMAIN, entry.entry_id, entry.data
+                platform,
+                DOMAIN,
+                entry.entry_id,
+                {},  # pass entry.entry_id as discovery_info
             )
         )
 

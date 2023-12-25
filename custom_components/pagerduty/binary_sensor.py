@@ -13,7 +13,11 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up the PagerDuty binary sensor/sensor platform."""
-    coordinator = hass.data[DOMAIN]["coordinator"]
+    if discovery_info is None:
+        return
+
+    entry_id = discovery_info  # discovery_info is now the entry_id
+    coordinator = hass.data[DOMAIN][entry_id]["coordinator"]
 
     # Create entities
     entities = [PagerDutyBinarySensor(coordinator)]
