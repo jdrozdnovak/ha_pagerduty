@@ -16,7 +16,9 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            valid = await self._test_api_key(user_input[CONF_API_KEY])
+            valid = await self.hass.async_add_executor_job(
+                self._test_api_key, user_input[CONF_API_KEY]
+            )
             if valid:
                 return self.async_create_entry(title="PagerDuty", data=user_input)
             else:
@@ -32,7 +34,7 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def _test_api_key(self, api_key):
+    def _test_api_key(self, api_key):
         """Test the API key is valid."""
         session = APISession(api_key)
         try:

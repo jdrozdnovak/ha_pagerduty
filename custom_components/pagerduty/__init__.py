@@ -15,11 +15,11 @@ _LOGGER = logging.getLogger(__name__)
 class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching PagerDuty data."""
 
-    def __init__(self, hass, session):
+    def __init__(self, hass, session, update_interval=UPDATE_INTERVAL):
         """Initialize."""
         self.session = session
         super().__init__(
-            hass, _LOGGER, name="PagerDuty", update_interval=UPDATE_INTERVAL
+            hass, _LOGGER, name="PagerDuty", update_interval=update_interval
         )
 
     async def _async_update_data(self):
@@ -101,8 +101,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: config_entries.ConfigEntry
+) -> bool:
     """Set up PagerDuty from a config entry."""
+    hass.data.setdefault(DOMAIN, {})
+
     api_key = entry.data[CONF_API_KEY]
     update_interval = entry.options.get("update_interval", UPDATE_INTERVAL)
 
@@ -117,11 +121,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEnt
         "session": session,
     }
 
-    hass.async_create_task(
-        hass.helpers.discovery.async_load_platform("binary_sensor", DOMAIN, {}, entry)
-    )
-    hass.async_create_task(
-        hass.helpers.discovery.async_load_platform("sensor", DOMAIN, {}, entry)
-    )
+    # Corrected platform loading
+    for platform in ["binary_sensor", "sensor"]:
+        hass.async_create_task(
+            hass.helpers.discovery.async_load_platform(
+                platform, DOMAIN, entry.entry_id, entry.data
+            )
+        )
 
     return True
