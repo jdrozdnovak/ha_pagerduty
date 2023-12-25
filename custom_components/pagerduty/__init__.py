@@ -1,7 +1,7 @@
 """The PagerDuty integration for Home Assistant."""
 
 import logging
-from datetime import timedelta
+from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -84,27 +84,32 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the PagerDuty integration."""
-    _LOGGER.debug("Setting up PagerDuty integration")
+    """Set up the PagerDuty integration from a config entry."""
+    hass.data.setdefault(DOMAIN, {})
+    return True
 
-    if DOMAIN in hass.data:
-        return True
 
-    api_key = config[DOMAIN][CONF_API_KEY]
+async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry):
+    """Set up PagerDuty from a config entry."""
+    api_key = entry.data[CONF_API_KEY]
+    update_interval = entry.options.get("update_interval", UPDATE_INTERVAL)
+
     session = APISession(api_key)
-    coordinator = PagerDutyDataUpdateCoordinator(hass, session)
+    coordinator = PagerDutyDataUpdateCoordinator(
+        hass, session, update_interval=update_interval
+    )
     await coordinator.async_refresh()
 
-    hass.data[DOMAIN] = {
+    hass.data[DOMAIN][entry.entry_id] = {
         "coordinator": coordinator,
         "session": session,
     }
 
     hass.async_create_task(
-        hass.helpers.discovery.async_load_platform("binary_sensor", DOMAIN, {}, config)
+        hass.helpers.discovery.async_load_platform("binary_sensor", DOMAIN, {}, entry)
     )
     hass.async_create_task(
-        hass.helpers.discovery.async_load_platform("sensor", DOMAIN, {}, config)
+        hass.helpers.discovery.async_load_platform("sensor", DOMAIN, {}, entry)
     )
 
     return True
