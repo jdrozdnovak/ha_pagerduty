@@ -24,9 +24,15 @@ class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity):
         super().__init__(coordinator)
         _LOGGER.debug("Initializing PagerDuty binary sensor")
         self._coordinator = coordinator
-        self._is_on_call = False
+        self._is_on_call = None
         self._attr_name = "PagerDuty On Call Status"
         self._attr_unique_id = f"pd_oncall_{user_id}"
+
+    async def async_added_to_hass(self):
+        """When entity is added to hass."""
+        last_state = await self.async_get_last_state()
+        if last_state:
+            self._is_on_call = last_state.state == "on"
 
     @property
     def is_on(self):

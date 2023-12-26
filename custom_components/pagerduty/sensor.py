@@ -4,6 +4,7 @@ import logging
 from collections import defaultdict
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.restore_state import RestoreEntity
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,16 +34,22 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities(sensors, True)
 
 
-class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
+class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity, RestoreEntity):
     def __init__(self, coordinator, service_id, sensor_name, team_id):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._service_id = service_id
         self._attr_name = sensor_name
         self._attr_unique_id = f"pagerduty_{team_id}{service_id}"
-        self._incidents = []
+        self._incidents = None
 
         _LOGGER.debug(f"Initializing PagerDuty incident sensor: {self._attr_name}")
+
+    async def async_added_to_hass(self):
+        """When entity is added to hass."""
+        last_state = await self.async_get_last_state()
+        if last_state:
+            self._incidents = last_state.state
 
     @property
     def native_value(self):
@@ -76,12 +83,15 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         """Fetch new state data for the sensor asynchronously."""
         _LOGGER.debug(f"Updating PagerDuty incident sensor: {self._attr_name}")
 
-        incidents_data = self.coordinator.data["incidents"]
         self._incidents = [
-            inc for inc in incidents_data if inc["service"]["id"] == self._service_id
+            inc
+            for inc in self.coordinator.data.get("incidents", [])
+            if inc["service"]["id"] == self._service_id
         ]
 
-        _LOGGER.debug(f"Updated incidents count: {len(self._incidents)}")
+        _LOGGER.debug(
+            f"Updated incidents count for {self._attr_name}: {len(self._incidents)}"
+        )
 
         super()._handle_coordinator_update()
 
@@ -94,10 +104,16 @@ class PagerDutyTotalIncidentsSensor(SensorEntity, CoordinatorEntity):
         super().__init__(coordinator)
         self._attr_name = "PagerDuty Total Incidents"
         self._attr_unique_id = "pagerduty_total_incidents"
-        self._total_incidents = 0
+        self._total_incidents = None
+
+    async def async_added_to_hass(self):
+        """When entity is added to hass."""
+        last_state = await self.async_get_last_state()
+        if last_state:
+            self._total_incidents = last_state.state
 
     @property
-    def state(self):
+    def native_value(self):
         """Return the state of the sensor (total number of incidents)."""
         return self._total_incidents
 
@@ -126,7 +142,7 @@ class PagerDutyTotalIncidentsSensor(SensorEntity, CoordinatorEntity):
 
     def _handle_coordinator_update(self):
         """Handle an update from the coordinator."""
-        _LOGGER.debug(f"Updating PagerDuty total incidents sensor")
+        _LOGGER.debug("Updating PagerDuty total incidents sensor")
 
         self._total_incidents = len(self.coordinator.data.get("incidents", []))
 
