@@ -49,7 +49,9 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity, RestoreEntity):
         """When entity is added to hass."""
         last_state = await self.async_get_last_state()
         if last_state:
-            self._incidents = last_state.state
+            self._incidents_count = int(last_state.state)
+
+        return self._incidents_count if self._incidents_count is not None else None
 
     @property
     def native_value(self):
@@ -110,7 +112,10 @@ class PagerDutyTotalIncidentsSensor(SensorEntity, CoordinatorEntity, RestoreEnti
         """When entity is added to hass."""
         last_state = await self.async_get_last_state()
         if last_state:
-            self._total_incidents = last_state.state
+            self._total_incidents = int(last_state.state)
+
+        # Inside the native_value property
+        return self._total_incidents if self._total_incidents is not None else None
 
     @property
     def native_value(self):
