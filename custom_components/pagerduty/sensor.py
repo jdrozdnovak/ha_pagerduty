@@ -9,13 +9,9 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Set up the PagerDuty incident sensors asynchronously."""
-    if discovery_info is None:
-        return
-
-    entry_id = discovery_info
-    coordinator = hass.data[DOMAIN][entry_id]["coordinator"]
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up the PagerDuty sensors from a config entry."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     sensors = []
 
     _LOGGER.debug("Setting up PagerDuty incident sensors")

@@ -10,19 +10,12 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Set up the PagerDuty binary sensor/sensor platform."""
-    if discovery_info is None:
-        return
-
-    entry_id = discovery_info
-    coordinator = hass.data[DOMAIN][entry_id]["coordinator"]
-
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up the PagerDuty binary sensors from a config entry."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     user_id = coordinator.data.get("user_id", "")
 
-    entities = [PagerDutyBinarySensor(coordinator, user_id)]
-
-    async_add_entities(entities)
+    async_add_entities([PagerDutyBinarySensor(coordinator, user_id)])
 
 
 class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity):
