@@ -9,13 +9,9 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Set up the PagerDuty incident sensors asynchronously."""
-    if discovery_info is None:
-        return
-
-    entry_id = discovery_info  # discovery_info is now the entry_id
-    coordinator = hass.data[DOMAIN][entry_id]["coordinator"]
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up the PagerDuty sensors from a config entry."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     sensors = []
 
     _LOGGER.debug("Setting up PagerDuty incident sensors")
@@ -26,8 +22,9 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         service_id = service["id"]
         service_name = service["summary"]
         team_name = service.get("team_name", "Unknown")
+        team_id = service.get("team_id", "Unknown")
         sensor_name = f"PD-{team_name}-{service_name}"
-        sensor = PagerDutyIncidentSensor(coordinator, service_id, sensor_name)
+        sensor = PagerDutyIncidentSensor(coordinator, service_id, sensor_name, team_id)
         sensors.append(sensor)
 
     total_incidents_sensor = PagerDutyTotalIncidentsSensor(coordinator)
@@ -37,21 +34,20 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
 
 class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
-    def __init__(self, coordinator, service_id, sensor_name):
+    def __init__(self, coordinator, service_id, sensor_name, team_id):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._service_id = service_id
         self._attr_name = sensor_name
-        self._attr_unique_id = f"pagerduty_{service_id}"
+        self._attr_unique_id = f"pagerduty_{team_id}{service_id}"
         self._incidents = []
 
         _LOGGER.debug(f"Initializing PagerDuty incident sensor: {self._attr_name}")
 
     @property
-    def state(self):
+    def native_value(self):
         """Return the state of the sensor (total count of incidents)."""
-        _LOGGER.debug(f"Updating state of: {self._attr_name} to {len(self._incidents)}")
-        return len(self._incidents)
+        return len(self.coordinator.data.get("incidents", []))
 
     @property
     def unit_of_measurement(self):
@@ -80,7 +76,6 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         """Fetch new state data for the sensor asynchronously."""
         _LOGGER.debug(f"Updating PagerDuty incident sensor: {self._attr_name}")
 
-        # Fetch new incidents for this service
         incidents_data = self.coordinator.data["incidents"]
         self._incidents = [
             inc for inc in incidents_data if inc["service"]["id"] == self._service_id

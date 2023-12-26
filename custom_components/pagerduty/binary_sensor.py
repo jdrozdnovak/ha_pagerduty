@@ -3,7 +3,6 @@
 import logging
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
-    DEVICE_CLASS_OCCUPANCY,
 )
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
@@ -11,34 +10,23 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Set up the PagerDuty binary sensor/sensor platform."""
-    if discovery_info is None:
-        return
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up the PagerDuty binary sensors from a config entry."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    user_id = coordinator.data.get("user_id", "")
 
-    entry_id = discovery_info  # discovery_info is now the entry_id
-    coordinator = hass.data[DOMAIN][entry_id]["coordinator"]
-
-    # Create entities
-    entities = [PagerDutyBinarySensor(coordinator)]
-
-    async_add_entities(entities)
+    async_add_entities([PagerDutyBinarySensor(coordinator, user_id)])
 
 
 class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity):
-    def __init__(self, coordinator):
+    def __init__(self, coordinator, user_id):
         """Initialize the binary sensor."""
         super().__init__(coordinator)
         _LOGGER.debug("Initializing PagerDuty binary sensor")
         self._coordinator = coordinator
         self._is_on_call = False
-        self._name = "PagerDuty On Call Status"
-        self._attr_unique_id = "pd_oncall_sensor"
-
-    @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self._name
+        self._attr_name = "PagerDuty On Call Status"
+        self._attr_unique_id = f"pd_oncall_{user_id}"
 
     @property
     def is_on(self):
