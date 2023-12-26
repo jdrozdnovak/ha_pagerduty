@@ -96,7 +96,7 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity, RestoreEntity):
         super()._handle_coordinator_update()
 
 
-class PagerDutyTotalIncidentsSensor(SensorEntity, CoordinatorEntity):
+class PagerDutyTotalIncidentsSensor(SensorEntity, CoordinatorEntity, RestoreEntity):
     """Define a sensor for the total number of PagerDuty incidents."""
 
     def __init__(self, coordinator):
