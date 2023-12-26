@@ -14,7 +14,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     if discovery_info is None:
         return
 
-    entry_id = discovery_info  # discovery_info is now the entry_id
+    entry_id = discovery_info
     coordinator = hass.data[DOMAIN][entry_id]["coordinator"]
     sensors = []
 
