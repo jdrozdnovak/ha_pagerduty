@@ -41,22 +41,18 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity, RestoreEntity):
         self._service_id = service_id
         self._attr_name = sensor_name
         self._attr_unique_id = f"pagerduty_{team_id}{service_id}"
-        self._incidents = None
-
-        _LOGGER.debug(f"Initializing PagerDuty incident sensor: {self._attr_name}")
+        self._incidents_count = None  # Track count of incidents for this service
 
     async def async_added_to_hass(self):
         """When entity is added to hass."""
         last_state = await self.async_get_last_state()
         if last_state:
-            self._incidents_count = int(last_state.state)
-
-        return self._incidents_count if self._incidents_count is not None else None
+            self._incidents_count = int(last_state.state) if last_state.state else 0
 
     @property
     def native_value(self):
-        """Return the state of the sensor (total count of incidents)."""
-        return len(self.coordinator.data.get("incidents", []))
+        """Return the state of the sensor (total count of incidents for this service)."""
+        return self._incidents_count
 
     @property
     def unit_of_measurement(self):
@@ -66,14 +62,17 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity, RestoreEntity):
     @property
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
+        if self._incidents_count is None:
+            return None
         urgency_counts = defaultdict(int)
         status_counts = defaultdict(int)
-        for incident in self._incidents:
+        for incident in self.coordinator.data.get("incidents", []):
+            if incident["service"]["id"] != self._service_id:
+                continue
             urgency = incident.get("urgency", "unknown")
             status = incident.get("status", "unknown")
             urgency_counts[urgency] += 1
             status_counts[status] += 1
-
         return {
             "urgency_low": urgency_counts["low"],
             "urgency_high": urgency_counts["high"],
@@ -83,19 +82,12 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity, RestoreEntity):
 
     def _handle_coordinator_update(self):
         """Fetch new state data for the sensor asynchronously."""
-        _LOGGER.debug(f"Updating PagerDuty incident sensor: {self._attr_name}")
-
-        self._incidents = [
+        incidents = [
             inc
             for inc in self.coordinator.data.get("incidents", [])
             if inc["service"]["id"] == self._service_id
         ]
-
-        _LOGGER.debug(
-            f"Updated incidents count for {self._attr_name}: {len(self._incidents)}"
-        )
-
-        super()._handle_coordinator_update()
+        self._incidents_count = len(incidents)
 
 
 class PagerDutyTotalIncidentsSensor(SensorEntity, CoordinatorEntity, RestoreEntity):
