@@ -1,6 +1,7 @@
 {
     "services": {
         "send_notification": {
+            "name":"PagerDuty Notification",
             "description": "Send a notification to PagerDuty Service ID.",
             "fields": {
                 "service_id": {
