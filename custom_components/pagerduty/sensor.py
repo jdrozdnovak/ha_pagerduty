@@ -49,8 +49,12 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         return self._incidents_count
 
     @property
-    def unit_of_measurement(self):
+    def native_unit_of_measurement(self):
         return "incidents"
+
+    @property
+    def state_class(self):
+        return "measurement"
 
     @property
     def extra_state_attributes(self):
@@ -94,8 +98,12 @@ class PagerDutyTotalIncidentsSensor(SensorEntity, CoordinatorEntity):
         return self._total_incidents
 
     @property
-    def unit_of_measurement(self):
+    def native_unit_of_measurement(self):
         return "incidents"
+
+    @property
+    def state_class(self):
+        return "measurement"
 
     @property
     def extra_state_attributes(self):
