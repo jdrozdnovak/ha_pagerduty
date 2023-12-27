@@ -1,4 +1,15 @@
 {
+    "service": {
+        "send_notification": {
+            "description": "Send a notification to PagerDuty Service ID.",
+            "fields": {
+                "service_id": {
+                    "description": "The unique ID of the PagerDuty service",
+                    "example": "P123456"
+                }
+            }
+        }
+    },
     "title": "PagerDuty",
     "config": {
         "step": {
@@ -27,14 +38,6 @@
                     "update_interval": "Update Interval"
                 }
             }
-        }
-    },
-    "pagerduty": {
-        "service": {
-            "send_notification": "Send a notification to PagerDuty Service ID."
-        },
-        "service_field": {
-            "service_id": "Service ID"
         }
     }
 }

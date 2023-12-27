@@ -12,7 +12,7 @@ jobs:
         with:
             keep_latest: 10
             keep_min_download_counts: 1
-            delete_expired_data: 10
+            delete_expired_data: 1
             delete_prerelease_only: True
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
