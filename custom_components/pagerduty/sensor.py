@@ -12,6 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the PagerDuty sensors from a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    user_id = coordinator.data.get("user_id", "")
     sensors = []
 
     _LOGGER.debug("Setting up PagerDuty incident sensors")
@@ -29,6 +30,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     total_incidents_sensor = PagerDutyTotalIncidentsSensor(coordinator)
     sensors.append(total_incidents_sensor)
+
+    assigned_incidents_sensor = PagerDutyAssignedIncidentsSensor(coordinator, user_id)
+    sensors.append(assigned_incidents_sensor)
 
     async_add_entities(sensors, True)
 
@@ -125,4 +129,42 @@ class PagerDutyTotalIncidentsSensor(SensorEntity, CoordinatorEntity):
             self._urgency_counts[urgency] += 1
             self._status_counts[status] += 1
         _LOGGER.debug("PagerDutyTotalIncidentsSensor updated")
+        super()._handle_coordinator_update()
+
+
+class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
+    def __init__(self, coordinator, user_id):
+        super().__init__(coordinator)
+        self._user_id = user_id
+        self._attr_name = "PagerDuty Assigned Incidents"
+        self._assigned_incidents_count = None
+        self._attr_unique_id = f"pagerduty_assigned_{user_id}"
+        _LOGGER.debug(
+            f"Initializing PagerDutyAssignedIncidentsSensor for user {user_id}"
+        )
+
+    @property
+    def native_value(self):
+        return self._assigned_incidents_count
+
+    @property
+    def native_unit_of_measurement(self):
+        return "incidents"
+
+    @property
+    def state_class(self):
+        return "measurement"
+
+    def _handle_coordinator_update(self):
+        _LOGGER.debug(
+            f'Updating PagerDutyAssignedIncidentsSensor Incidents:{self.coordinator.data.get("incidents", [])}'
+        )
+        assigned_incidents = [
+            incident
+            for incident in self.coordinator.data.get("incidents", [])
+            for assignee in incident.get("assignments", [])
+            if assignee.get("assignee", {}).get("id") == self._user_id
+        ]
+        self._assigned_incidents_count = len(assigned_incidents)
+        _LOGGER.debug(f"Assigned incidents count: {self._assigned_incidents_count}")
         super()._handle_coordinator_update()

@@ -82,6 +82,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
                 params={
                     "service_ids[]": service_id,
                     "statuses[]": ["acknowledged", "triggered"],
+                    "include[]": "users",
                 },
             )
             all_incidents.extend(incidents)
