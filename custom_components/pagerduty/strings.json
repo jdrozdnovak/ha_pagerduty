@@ -1,10 +1,10 @@
 {
     "services": {
         "send_notification": {
-            "name": "PagerDuty Notification",
             "description": "Send a notification to PagerDuty Service ID.",
             "fields": {
                 "service_id": {
+                    "name":"PagerDuty Notification",
                     "description": "The unique ID of the PagerDuty service",
                     "example": "P123456"
                 }
@@ -34,7 +34,7 @@
         "step": {
             "init": {
                 "title": "Configure PagerDuty",
-                "description": "Set the update interval (in minutes).",
+                "description": "Set the update interval (in seconds).",
                 "data": {
                     "update_interval": "Update Interval"
                 }
