@@ -1,6 +1,7 @@
 # PagerDuty Integration for Home Assistant
 
 [![GitHub Release][releases-shield]][releases]
+[![License][license-shield]](LICENSE)
 
 [![hacs][hacsbadge]][hacs]
 [![Project Maintenance][maintenance-shield]][user_profile]
@@ -10,9 +11,10 @@ A custom component designed for [Home Assistant](https://www.home-assistant.io) 
 ### Features
 
 - Monitor PagerDuty services and incidents.
-- View on-call schedules and incident counts.
+- View on-call schedule of the API ovner.
+- View assigned incident counts.
 - Support for multiple PagerDuty teams.
-- Real-time updates on incidents and their statuses.
+- Allow notification to a service
 
 ### Install with HACS (recommended)
 If you have [HACS][hacs] installed, search for the PagerDuty Integration and install it directly from HACS. HACS will manage updates, allowing you to easily keep track of the latest versions.
@@ -29,7 +31,20 @@ If you have [HACS][hacs] installed, search for the PagerDuty Integration and ins
 
 ### Configuration
 
-Once installed, configure the integration with your PagerDuty API token and Team ID through the Home Assistant UI.
+Once installed, configure the integration with your PagerDuty API token through the Home Assistant UI.
+
+### Use of notifications
+
+The service ID you can get from the URL when checking the service.  
+The integration will create a new integration_key in PD with Home Assistant name, no need to fiddle with integration_key
+
+```yaml
+service: notify.pagerduty
+data:
+    message: "Your message here"
+    data:
+    service_id: "specific_service_id"
+```
 
 ### Contributions
 
@@ -45,3 +60,4 @@ Contributions to the project are welcome!
 [releases-shield]: https://img.shields.io/github/release/jdrozdnovak/ha_pagerduty.svg?style=for-the-badge
 [releases]: https://github.com/jdrozdnovak/ha_pagerduty/releases
 [user_profile]: https://github.com/jdrozdnovak
+[license-shield]: https://img.shields.io/github/license/jdrozdnovak/ha_pagerduty.svg?style=for-the-badge

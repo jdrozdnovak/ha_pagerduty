@@ -1,5 +1,8 @@
 import logging
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+    UpdateFailed,
+)
 from .const import UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,7 +23,9 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             await self.async_refresh()
         except UpdateFailed:
-            _LOGGER.warning("Initial data update failed, will retry in background")
+            _LOGGER.warning(
+                "Initial data update failed, will retry in background"
+            )
 
     async def _async_update_data(self):
         """Fetch data from API."""
@@ -31,7 +36,9 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
                 self.fetch_on_calls, user_id
             )
 
-            self.teams = {team["id"]: team["name"] for team in user.get("teams", [])}
+            self.teams = {
+                team["id"]: team["name"] for team in user.get("teams", [])
+            }
 
             team_ids = list(self.teams.keys())
             services = await self.hass.async_add_executor_job(
@@ -67,7 +74,9 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         """Fetch services for given team IDs."""
         all_services = []
         for team_id in team_ids:
-            services = self.session.list_all("services", params={"team_ids[]": team_id})
+            services = self.session.list_all(
+                "services", params={"team_ids[]": team_id}
+            )
             for service in services:
                 service["team_name"] = self.teams.get(team_id, "Unknown")
             all_services.extend(services)
@@ -82,6 +91,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
                 params={
                     "service_ids[]": service_id,
                     "statuses[]": ["acknowledged", "triggered"],
+                    "include[]": "users",
                 },
             )
             all_incidents.extend(incidents)

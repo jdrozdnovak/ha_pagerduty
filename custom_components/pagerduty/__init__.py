@@ -4,12 +4,17 @@ import logging
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.const import CONF_API_KEY
+from homeassistant.const import CONF_API_KEY, Platform, CONF_NAME
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import discovery
 from .const import DOMAIN, UPDATE_INTERVAL
 from pdpyras import APISession
 from .coordinator import PagerDutyDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -34,24 +39,31 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: config_entries.ConfigEntry
 ) -> bool:
     """Set up PagerDuty from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
-
     api_key = entry.data[CONF_API_KEY]
     update_interval = entry.options.get("update_interval", UPDATE_INTERVAL)
 
     session = APISession(api_key)
     coordinator = PagerDutyDataUpdateCoordinator(
-        hass, session, update_interval=update_interval
+        hass, session, update_interval
     )
 
     await coordinator.async_first_config_entry()
 
-    hass.data[DOMAIN][entry.entry_id] = {
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "coordinator": coordinator,
         "session": session,
     }
 
-    for platform in ["binary_sensor", "sensor"]:
-        await hass.config_entries.async_forward_entry_setup(entry, platform)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    hass.async_create_task(
+        discovery.async_load_platform(
+            hass,
+            Platform.NOTIFY,
+            DOMAIN,
+            {CONF_NAME: DOMAIN, CONF_API_KEY: api_key},
+            entry.data,
+        )
+    )
 
     return True
