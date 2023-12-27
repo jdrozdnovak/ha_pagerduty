@@ -1,0 +1,45 @@
+{
+    "services": {
+        "send_notification": {
+            "name":"PagerDuty Notification",
+            "description": "Send a notification to PagerDuty Service ID.",
+            "fields": {
+                "service_id": {
+                    "name":"PagerDuty Notification",
+                    "description": "The unique ID of the PagerDuty service",
+                    "example": "P123456"
+                }
+            }
+        }
+    },
+    "title": "PagerDuty",
+    "config": {
+        "step": {
+            "user": {
+                "title": "Connect to PagerDuty",
+                "description": "Enter your API key to connect to PagerDuty.",
+                "data": {
+                    "api_key": "API Key"
+                }
+            }
+        },
+        "error": {
+            "invalid_api_key": "The API key is invalid. Please check and try again.",
+            "cannot_connect": "Failed to connect to PagerDuty. Please check your network connection and try again."
+        },
+        "abort": {
+            "already_configured": "PagerDuty is already configured."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Configure PagerDuty",
+                "description": "Set the update interval (in seconds).",
+                "data": {
+                    "update_interval": "Update Interval"
+                }
+            }
+        }
+    }
+}
