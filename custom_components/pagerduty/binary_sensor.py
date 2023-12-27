@@ -5,7 +5,6 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
 )
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.helpers.restore_state import RestoreEntity
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -19,7 +18,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities([PagerDutyBinarySensor(coordinator, user_id)])
 
 
-class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity, RestoreEntity):
+class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity):
     def __init__(self, coordinator, user_id):
         """Initialize the binary sensor."""
         super().__init__(coordinator)
@@ -28,12 +27,6 @@ class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity, RestoreEntity
         self._is_on_call = None
         self._attr_name = "PagerDuty On Call Status"
         self._attr_unique_id = f"pd_oncall_{user_id}"
-
-    async def async_added_to_hass(self):
-        """When entity is added to hass."""
-        last_state = await self.async_get_last_state()
-        if last_state:
-            self._is_on_call = last_state.state == "on"
 
     @property
     def is_on(self):

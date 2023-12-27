@@ -1,0 +1,6 @@
+send_notification:
+  description: Send a notification to PagerDuty.
+  fields:
+    service_id:
+      description: The ID of the PagerDuty service.
+      example: "your_service_id"

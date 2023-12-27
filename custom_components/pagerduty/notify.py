@@ -1,83 +1,79 @@
 import logging
 from pdpyras import APISession, EventsAPISession, PDClientError
-import voluptuous as vol
-from homeassistant.components.notify import (
-    BaseNotificationService,
-    PLATFORM_SCHEMA,
-)
-import homeassistant.helpers.config_validation as cv
+from homeassistant.components.notify import BaseNotificationService
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "pagerduty"
-CONF_SERVICE_ID = "service_id"
 CONF_API_KEY = "api_key"
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_SERVICE_ID): cv.string,
-    }
-)
 
-
-async def async_get_service(
-    hass: HomeAssistant,
-    config: ConfigType,
-    discovery_info: DiscoveryInfoType | None = None,
-) -> PagerDutyNotificationService | None:
+async def async_get_service(hass, config, discovery_info=None):
     """Get the PagerDuty notification service."""
     if discovery_info is None:
         return None
 
-    service_id = discovery_info[CONF_SERVICE_ID]
-    api_key = hass.data[DOMAIN][CONF_API_KEY]  # Ensure this is stored correctly
+    api_key = discovery_info[CONF_API_KEY]
     session = APISession(api_key)
-
-    integration_key = await hass.async_add_executor_job(
-        get_integration_key, session, service_id
-    )
-    if integration_key:
-        return PagerDutyNotificationService(integration_key)
-
-    _LOGGER.error("Failed to retrieve PagerDuty integration key")
-    return None
+    return PagerDutyNotificationService(session)
 
 
 def get_integration_key(session, service_id):
     """Retrieve or create integration key for the given service."""
-    integrations = session.rget(f"/services/{service_id}/integrations")
+    _LOGGER.debug(f"Retrieving integrations for service ID: {service_id}")
+    service_details = session.rget(f"/services/{service_id}")
+    _LOGGER.debug(f"Service details received: {service_details}")
+    integrations = service_details.get("integrations", [])
+    _LOGGER.debug(f"Integrations in service: {integrations}")
+    homeassistant_integration_name = "Home Assistant Integration"
 
     for integration in integrations:
-        if integration["type"] == "events_api_v2_inbound_integration":
+        if (
+            integration["type"] == "events_api_v2_inbound_integration"
+            and integration["summary"] == homeassistant_integration_name
+        ):
             integration_id = integration["id"]
-            integration_details = session.rget(f"/integrations/{integration_id}")
+            integration_details = session.rget(
+                f"/services/{service_id}/integrations/{integration_id}"
+            )
+            _LOGGER.debug(f"Integration details: {integration_details}")
             return integration_details.get("integration_key")
 
     new_integration = {
         "type": "events_api_v2_inbound_integration",
-        "name": "Home Assistant Integration",
+        "name": homeassistant_integration_name,
     }
     created_integration = session.rpost(
         f"/services/{service_id}/integrations", json=new_integration
     )
+    _LOGGER.debug(f"Created new integration: {created_integration}")
     return created_integration.get("integration_key")
 
 
 class PagerDutyNotificationService(BaseNotificationService):
-    def __init__(self, integration_key):
+    def __init__(self, session):
         """Initialize the service."""
-        self.integration_key = integration_key
+        self.session = session
 
     def send_message(self, message="", **kwargs):
         """Send a message to PagerDuty."""
-        session = EventsAPISession(self.integration_key)
-        payload = {
-            "summary": message,
-            "source": "Home Assistant",
-            "severity": "info",
-        }
+        service_id = kwargs.get("data", {}).get("service_id")
+        if not service_id:
+            _LOGGER.error("Service ID not provided for PagerDuty notification.")
+            return
+
+        integration_key = get_integration_key(self.session, service_id)
+        if not integration_key:
+            _LOGGER.error(
+                f"Failed to retrieve PagerDuty integration key for service_id: {service_id}"
+            )
+            return
+
+        event_session = EventsAPISession(integration_key)
+        source = "Home Assistant"
+
         try:
-            session.trigger_incident(payload)
+            event_session.trigger(message, source)
             _LOGGER.debug("Sent notification to PagerDuty")
         except PDClientError as e:
-            _LOGGER.error("Failed to send notification to PagerDuty: %s", e)
+            _LOGGER.error(f"Failed to send notification to PagerDuty: {e}")
