@@ -25,13 +25,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
         team_name = service.get("team_name", "Unknown")
         team_id = service.get("team_id", "Unknown")
         sensor_name = f"PD-{team_name}-{service_name}"
-        sensor = PagerDutyIncidentSensor(coordinator, service_id, sensor_name, team_id)
+        sensor = PagerDutyIncidentSensor(
+            coordinator, service_id, sensor_name, team_id
+        )
         sensors.append(sensor)
 
     total_incidents_sensor = PagerDutyTotalIncidentsSensor(coordinator)
     sensors.append(total_incidents_sensor)
 
-    assigned_incidents_sensor = PagerDutyAssignedIncidentsSensor(coordinator, user_id)
+    assigned_incidents_sensor = PagerDutyAssignedIncidentsSensor(
+        coordinator, user_id
+    )
     sensors.append(assigned_incidents_sensor)
 
     async_add_entities(sensors, True)
@@ -73,7 +77,9 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
         _LOGGER.debug("Updating PagerDutyIncidentSensor: %s", self._attr_name)
         incidents_data = self.coordinator.data.get("incidents", [])
         self._incidents_count = sum(
-            1 for inc in incidents_data if inc["service"]["id"] == self._service_id
+            1
+            for inc in incidents_data
+            if inc["service"]["id"] == self._service_id
         )
         self._urgency_counts = defaultdict(int)
         self._status_counts = defaultdict(int)
@@ -166,5 +172,7 @@ class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
             if assignee.get("assignee", {}).get("id") == self._user_id
         ]
         self._assigned_incidents_count = len(assigned_incidents)
-        _LOGGER.debug(f"Assigned incidents count: {self._assigned_incidents_count}")
+        _LOGGER.debug(
+            f"Assigned incidents count: {self._assigned_incidents_count}"
+        )
         super()._handle_coordinator_update()

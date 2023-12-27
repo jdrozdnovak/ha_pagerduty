@@ -43,7 +43,9 @@ async def async_setup_entry(
     update_interval = entry.options.get("update_interval", UPDATE_INTERVAL)
 
     session = APISession(api_key)
-    coordinator = PagerDutyDataUpdateCoordinator(hass, session, update_interval)
+    coordinator = PagerDutyDataUpdateCoordinator(
+        hass, session, update_interval
+    )
 
     await coordinator.async_first_config_entry()
 

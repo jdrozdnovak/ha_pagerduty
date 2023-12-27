@@ -20,7 +20,9 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._test_api_key, user_input[CONF_API_KEY]
             )
             if valid:
-                return self.async_create_entry(title="PagerDuty", data=user_input)
+                return self.async_create_entry(
+                    title="PagerDuty", data=user_input
+                )
             else:
                 errors["base"] = "invalid_api_key"
 
@@ -68,7 +70,9 @@ class PagerDutyOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Optional("update_interval", default=UPDATE_INTERVAL): int,
+                    vol.Optional(
+                        "update_interval", default=UPDATE_INTERVAL
+                    ): int,
                 }
             ),
         )

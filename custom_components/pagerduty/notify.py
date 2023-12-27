@@ -59,7 +59,9 @@ class PagerDutyNotificationService(BaseNotificationService):
         """Send a message to PagerDuty."""
         service_id = kwargs.get("data", {}).get("service_id")
         if not service_id:
-            _LOGGER.error("Service ID not provided for PagerDuty notification.")
+            _LOGGER.error(
+                "Service ID not provided for PagerDuty notification."
+            )
             return
 
         integration_key = get_integration_key(self.session, service_id)
