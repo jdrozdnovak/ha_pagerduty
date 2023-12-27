@@ -29,10 +29,12 @@
             }
         }
     },
-    "service": {
-        "send_notification": "Send a notification to PagerDuty Service ID."
-    },
-    "service_field": {
-        "service_id": "Service ID"
+    "pagerduty": {
+        "service": {
+            "send_notification": "Send a notification to PagerDuty Service ID."
+        },
+        "service_field": {
+            "service_id": "Service ID"
+        }
     }
 }
