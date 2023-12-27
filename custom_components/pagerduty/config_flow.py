@@ -2,7 +2,6 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.const import CONF_API_KEY
-from datetime import timedelta
 from .const import DOMAIN, UPDATE_INTERVAL
 from pdpyras import APISession, PDClientError
 
@@ -64,7 +63,6 @@ class PagerDutyOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
-        interval = timedelta(seconds=UPDATE_INTERVAL)
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
@@ -72,7 +70,9 @@ class PagerDutyOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Optional("update_interval", default=interval): int,
+                    vol.Optional(
+                        "update_interval", default=UPDATE_INTERVAL
+                    ): int,
                 }
             ),
         )

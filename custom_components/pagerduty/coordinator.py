@@ -3,7 +3,6 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
 )
-from .const import UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -11,7 +10,7 @@ _LOGGER = logging.getLogger(__name__)
 class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching PagerDuty data."""
 
-    def __init__(self, hass, session, update_interval=UPDATE_INTERVAL):
+    def __init__(self, hass, session, update_interval):
         """Initialize."""
         self.session = session
         super().__init__(
