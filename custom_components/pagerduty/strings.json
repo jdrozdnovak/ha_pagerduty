@@ -1,5 +1,5 @@
 {
-    "service": {
+    "services": {
         "send_notification": {
             "name": "PagerDuty Notification",
             "description": "Send a notification to PagerDuty Service ID.",
