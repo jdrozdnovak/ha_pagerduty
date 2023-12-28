@@ -49,19 +49,21 @@ jobs:
     steps:
       - name: Purge Beta Releases
         run: |
-          PR_BRANCH_NAME="${{ github.head_ref }}"
-          BETA_PREFIX="beta-"
-          
-          releases=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases" | \
-            jq -r '.[] | select(.tag_name | startswith("'"$BETA_PREFIX$PR_BRANCH_NAME"'")) | .id')
+            MERGED_BRANCH="${{ github.event.pull_request.head.ref }}"
+    
+            BETA_PREFIX="beta-"
 
-          for release in $releases; do
+            releases=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases" | \
+            jq -r --arg BRANCH "$MERGED_BRANCH" '.[] | select(.tag_name | startswith($BRANCH + "-")) | .id')
+    
+            for release in $releases; do
             curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/$release"
-          done
+                "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/$release"
+            done
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              
 
   latest-release:
     if: github.event.pull_request.merged == true
@@ -81,6 +83,11 @@ jobs:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             WITH_V: true
             DEFAULT_BUMP: "minor"
+
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+            ref: main
     
       - name: Update manifest.json with new version
         run: |
