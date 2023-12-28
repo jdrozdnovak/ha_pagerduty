@@ -8,13 +8,17 @@ on:
     paths:
       - 'custom_components/**'
   pull_request:
+    types:
+        - closed
+    branches:
+        - main
 
 permissions:
   contents: write
 
 jobs:
   update-manifest-and-release:
-    if: github.ref == 'refs/heads/main'
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
@@ -47,6 +51,7 @@ jobs:
             PRERELEASE: true
             WITH_V: true
             DEFAULT_BUMP: "patch"
+            PRERELEASE_SUFFIX: beta-${{ github.event.number }}
     
       - name: Create or Overwrite Beta Release
         uses: ncipollo/release-action@v1
@@ -58,7 +63,7 @@ jobs:
             prerelease: true
 
   purge-beta-releases:
-    if: github.ref == 'refs/heads/main'
+    if: github.event.pull_request.merged == true
     needs: beta-release
     runs-on: ubuntu-latest
     steps:
@@ -79,12 +84,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   latest-release:
-    if: github.ref == 'refs/heads/main'
-    needs: [beta-release, purge-beta-releases]
+    if: github.event.pull_request.merged == true
+    needs: [beta-release, purge-beta-releases, update-manifest-and-release]
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+        with:
+            ref: ${{ github.event.pull_request.merge_commit_sha }}
+            fetch-depth: '0'
     
       - name: Bump version and push tag (Latest)
         id: bump_latest_version
