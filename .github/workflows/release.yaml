@@ -111,6 +111,6 @@ jobs:
             token: ${{ secrets.GITHUB_TOKEN }}
             tag: ${{ steps.bump_latest_version.outputs.new_tag }}
             name: "Release ${{ steps.bump_latest_version.outputs.new_tag }}"
-            body: "Release description here"
+            body: ${{ github.event.pull_request.body }}
             draft: false
             prerelease: false
