@@ -34,6 +34,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             user = await self.hass.async_add_executor_job(self.fetch_user)
             _LOGGER.debug(f"Fetched user: {user}")
+
             user_id = user.get("id")
             _LOGGER.debug(f"User ID: {user_id}")
 
