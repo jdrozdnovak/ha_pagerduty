@@ -33,10 +33,14 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         """Fetch data from API."""
         try:
             user = await self.hass.async_add_executor_job(self.fetch_user)
+            _LOGGER.debug(f"Fetched user: {user}")
             user_id = user.get("id")
+            _LOGGER.debug(f"User ID: {user_id}")
+
             on_calls = await self.hass.async_add_executor_job(
                 self.fetch_on_calls, user_id
             )
+            _LOGGER.debug(f"Fetched on calls: {on_calls}")
 
             self.teams = {
                 team["id"]: team["name"] for team in user.get("teams", [])
@@ -61,10 +65,14 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
                 ]
             else:
                 filtered_services = services
+            _LOGGER.debug(f"Filtered services: {filtered_services}")
             service_ids = [service["id"] for service in filtered_services]
+            _LOGGER.debug(f"Service IDs: {service_ids}")
             incidents = await self.hass.async_add_executor_job(
                 self.fetch_incidents, service_ids
             )
+
+            _LOGGER.debug(f"Fetched incidents: {incidents}")
 
             return {
                 "on_calls": on_calls,
