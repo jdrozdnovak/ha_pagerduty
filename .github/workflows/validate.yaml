@@ -2,6 +2,8 @@ name: Validate
 
 on:
   push:
+    paths:
+      - 'custom_components/**'
   pull_request:
   workflow_dispatch:  
 

@@ -1,0 +1,116 @@
+name: Automated Release Workflow
+
+on:
+  push:
+    branches:
+        - '**'
+        - '!main'
+    paths:
+      - 'custom_components/**'
+
+permissions:
+  contents: write
+
+jobs:
+  update-manifest-and-release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Update manifest.json with new version
+        run: |
+          VERSION_TAG=${GITHUB_REF##*/}
+          jq '.version = "'$VERSION_TAG'"' custom_components/pagerduty/manifest.json > temp.json && mv temp.json custom_components/pagerduty/manifest.json
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add custom_components/pagerduty/manifest.json
+          git commit -m "Update version in manifest to $VERSION_TAG"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  beta-release:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+    
+      - name: Bump version and push tag (Beta)
+        id: bump_beta_version
+        uses: anothrNick/github-tag-action@1.64.0
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            PRERELEASE: true
+            WITH_V: true
+            DEFAULT_BUMP: "patch"
+    
+      - name: Create or Overwrite Beta Release
+        uses: ncipollo/release-action@v1
+        with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            tag: ${{ steps.bump_beta_version.outputs.new_tag }}
+            name: Beta Release - ${{ steps.bump_beta_version.outputs.new_tag }}
+            allowUpdates: true
+            prerelease: true
+
+  purge-beta-releases:
+    if: github.ref == 'refs/heads/main'
+    needs: beta-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge Beta Releases
+        run: |
+          PR_BRANCH_NAME="${{ github.head_ref }}"
+          BETA_PREFIX="beta-"
+          
+          releases=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases" | \
+            jq -r '.[] | select(.tag_name | startswith("'"$BETA_PREFIX$PR_BRANCH_NAME"'")) | .id')
+
+          for release in $releases; do
+            curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/$release"
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  latest-release:
+    if: github.ref == 'refs/heads/main'
+    needs: [beta-release, purge-beta-releases]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+    
+      - name: Bump version and push tag (Latest)
+        id: bump_latest_version
+        uses: anothrNick/github-tag-action@1.64.0
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            WITH_V: true
+            DEFAULT_BUMP: "minor"
+    
+      - name: Update manifest.json with new version
+        run: |
+            VERSION_TAG=${{ steps.bump_latest_version.outputs.new_tag }}
+            jq '.version = "'$VERSION_TAG'"' custom_components/pagerduty/manifest.json > temp.json && mv temp.json custom_components/pagerduty/manifest.json
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add custom_components/pagerduty/manifest.json
+            git commit -m "Update version in manifest to $VERSION_TAG"
+            git push
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+      - name: Create Latest Release
+        uses: ncipollo/release-action@v1
+        with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            tag: ${{ steps.bump_latest_version.outputs.new_tag }}
+            name: "Release ${{ steps.bump_latest_version.outputs.new_tag }}"
+            body: ${{ github.event.pull_request.body }}
+            draft: false
+            prerelease: false
