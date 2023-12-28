@@ -8,6 +8,9 @@ on:
     paths:
       - 'custom_components/**'
 
+permissions:
+  contents: write
+
 jobs:
   update-manifest-and-release:
     if: github.ref == 'refs/heads/main'
