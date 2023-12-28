@@ -45,7 +45,6 @@ jobs:
 
   purge-beta-releases:
     if: github.event.pull_request.merged == true
-    needs: beta-release
     runs-on: ubuntu-latest
     steps:
       - name: Purge Beta Releases
