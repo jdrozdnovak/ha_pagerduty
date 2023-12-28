@@ -51,15 +51,19 @@ jobs:
         run: |
             MERGED_BRANCH="${{ github.event.pull_request.head.ref }}"
     
-            BETA_PREFIX="beta-"
-
             releases=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases" | \
-            jq -r --arg BRANCH "$MERGED_BRANCH" '.[] | select(.tag_name | startswith($BRANCH + "-")) | .id')
-    
+            jq -r --arg BRANCH "$MERGED_BRANCH" '.[] | select(.target_commitish == $BRANCH) | "\(.id) \(.tag_name)"')
+
             for release in $releases; do
-            curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
-                "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/$release"
+                release_id=$(echo $release | cut -d ' ' -f1)
+                tag_name=$(echo $release | cut -d ' ' -f2)
+
+                curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+                    "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/$release_id"
+
+                curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+                    "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs/tags/$tag_name"
             done
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
