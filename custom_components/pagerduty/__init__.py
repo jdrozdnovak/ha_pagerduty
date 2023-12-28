@@ -7,7 +7,8 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import CONF_API_KEY, Platform, CONF_NAME
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import discovery
-from .const import DOMAIN, UPDATE_INTERVAL
+from datetime import timedelta
+from .const import DOMAIN
 from pdpyras import APISession
 from .coordinator import PagerDutyDataUpdateCoordinator
 
@@ -40,10 +41,10 @@ async def async_setup_entry(
 ) -> bool:
     """Set up PagerDuty from a config entry."""
     api_key = entry.data[CONF_API_KEY]
-    update_interval = entry.data.get("update_interval", UPDATE_INTERVAL)
-    ignored_team_ids = entry.data.get("ignored_team_ids", "").split(",")
+    update_interval = timedelta(seconds=entry.data.get("update_interval", 60))
+    ignored_team_ids = entry.data.get("ignored_team_ids", "")
     api_base_url = entry.data.get("api_base_url")
-    session = APISession(api_key, api_base_url=api_base_url)
+    session = APISession(api_key)
     session.url = api_base_url
 
     coordinator = PagerDutyDataUpdateCoordinator(
@@ -64,7 +65,11 @@ async def async_setup_entry(
             hass,
             Platform.NOTIFY,
             DOMAIN,
-            {CONF_NAME: DOMAIN, CONF_API_KEY: api_key},
+            {
+                CONF_NAME: DOMAIN,
+                CONF_API_KEY: api_key,
+                "api_base_url": api_base_url,
+            },
             entry.data,
         )
     )

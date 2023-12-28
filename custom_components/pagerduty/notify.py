@@ -13,18 +13,19 @@ async def async_get_service(hass, config, discovery_info=None):
     if discovery_info is None:
         return None
 
-    api_key = discovery_info["api_key"]
-    api_base_url = hass.data.get("api_base_url")
+    api_key = discovery_info[CONF_API_KEY]
+    api_base_url = discovery_info.get("api_base_url")
 
     session = APISession(api_key)
     session.url = api_base_url
-    return PagerDutyNotificationService(session)
+    return PagerDutyNotificationService(session, api_base_url)
 
 
 class PagerDutyNotificationService(BaseNotificationService):
-    def __init__(self, session):
+    def __init__(self, session, api_base_url):
         """Initialize the service."""
         self.session = session
+        self.api_base_url = api_base_url
 
     def send_message(self, message="", **kwargs):
         """Send a message to PagerDuty."""
@@ -44,7 +45,7 @@ class PagerDutyNotificationService(BaseNotificationService):
 
         events_api_base_url = (
             "https://events.pagerduty.com"
-            if self.session.api_base_url == "https://api.pagerduty.com"
+            if self.api_base_url == "https://api.pagerduty.com"
             else "https://events.eu.pagerduty.com"
         )
         event_session = EventsAPISession(integration_key)
@@ -66,13 +67,9 @@ def get_integration_key(session, service_id):
     _LOGGER.debug(f"Service details received: {service_details}")
     integrations = service_details.get("integrations", [])
     _LOGGER.debug(f"Integrations in service: {integrations}")
-    homeassistant_integration_name = "Home Assistant Integration"
 
     for integration in integrations:
-        if (
-            integration["type"] == "events_api_v2_inbound_integration"
-            and integration["summary"] == homeassistant_integration_name
-        ):
+        if "events_api_v2_inbound_integration" in integration["type"]:
             integration_id = integration["id"]
             integration_details = session.rget(
                 f"/services/{service_id}/integrations/{integration_id}"
@@ -82,7 +79,7 @@ def get_integration_key(session, service_id):
 
     new_integration = {
         "type": "events_api_v2_inbound_integration",
-        "name": homeassistant_integration_name,
+        "name": "Home Assistant Integration",
     }
     created_integration = session.rpost(
         f"/services/{service_id}/integrations", json=new_integration

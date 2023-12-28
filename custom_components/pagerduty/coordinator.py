@@ -15,6 +15,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize."""
         self.session = session
         self.ignored_team_ids = ignored_team_ids
+        _LOGGER.debug(f"Ignored teams: {ignored_team_ids}")
         super().__init__(
             hass, _LOGGER, name="PagerDuty", update_interval=update_interval
         )
@@ -45,13 +46,22 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             services = await self.hass.async_add_executor_job(
                 self.fetch_services, team_ids
             )
-            if self.ignored_team_ids:
-                services = [
-                    s
-                    for s in services
-                    if s["team_id"] not in self.ignored_team_ids
+            _LOGGER.debug(f"Existing services: {services}")
+            cleaned_ignored_team_ids = [
+                team_id.strip() for team_id in self.ignored_team_ids.split(",")
+            ]
+            if cleaned_ignored_team_ids:
+                filtered_services = [
+                    service
+                    for service in services
+                    if not any(
+                        team["id"] in cleaned_ignored_team_ids
+                        for team in service.get("teams", [])
+                    )
                 ]
-            service_ids = [service["id"] for service in services]
+            else:
+                filtered_services = services
+            service_ids = [service["id"] for service in filtered_services]
             incidents = await self.hass.async_add_executor_job(
                 self.fetch_incidents, service_ids
             )
