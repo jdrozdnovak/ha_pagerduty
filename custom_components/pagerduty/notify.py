@@ -16,7 +16,8 @@ async def async_get_service(hass, config, discovery_info=None):
     api_key = discovery_info["api_key"]
     api_base_url = hass.data.get("api_base_url")
 
-    session = APISession(api_key, api_base_url=api_base_url)
+    session = APISession(api_key)
+    session.url = api_base_url
     return PagerDutyNotificationService(session)
 
 
@@ -46,9 +47,8 @@ class PagerDutyNotificationService(BaseNotificationService):
             if self.session.api_base_url == "https://api.pagerduty.com"
             else "https://events.eu.pagerduty.com"
         )
-        event_session = EventsAPISession(
-            integration_key, api_base_url=events_api_base_url
-        )
+        event_session = EventsAPISession(integration_key)
+        event_session.url = events_api_base_url
 
         source = "Home Assistant"
 

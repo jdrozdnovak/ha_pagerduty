@@ -56,7 +56,8 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def _test_api_key(self, api_key, api_base_url):
         """Test if the API key is valid."""
-        session = APISession(api_key, api_base_url=api_base_url)
+        session = APISession(api_key)
+        session.url = api_base_url
         try:
             session.rget("abilities")
             return True

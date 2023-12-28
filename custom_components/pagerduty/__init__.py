@@ -1,7 +1,7 @@
 """The PagerDuty integration for Home Assistant."""
 
 import logging
-from homeassistant import config_entries
+from homeassistant import config_entries, core
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import CONF_API_KEY, Platform, CONF_NAME
@@ -44,6 +44,7 @@ async def async_setup_entry(
     ignored_team_ids = entry.data.get("ignored_team_ids", "").split(",")
     api_base_url = entry.data.get("api_base_url")
     session = APISession(api_key, api_base_url=api_base_url)
+    session.url = api_base_url
 
     coordinator = PagerDutyDataUpdateCoordinator(
         hass, session, update_interval, ignored_team_ids
