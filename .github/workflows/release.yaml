@@ -61,9 +61,11 @@ jobs:
 
                 curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
                     "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/$release_id"
+                echo "Deleted Release $release_id"
 
                 curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
                     "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs/tags/$tag_name"
+                echo "Deleted Tag $tag_name"
             done
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
