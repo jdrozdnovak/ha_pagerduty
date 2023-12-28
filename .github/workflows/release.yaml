@@ -81,6 +81,11 @@ jobs:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             WITH_V: true
             DEFAULT_BUMP: "minor"
+
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+            ref: main
     
       - name: Update manifest.json with new version
         run: |
