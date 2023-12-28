@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -10,9 +11,10 @@ _LOGGER = logging.getLogger(__name__)
 class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching PagerDuty data."""
 
-    def __init__(self, hass, session, update_interval):
+    def __init__(self, hass, session, update_interval, ignored_team_ids):
         """Initialize."""
         self.session = session
+        self.ignored_team_ids = ignored_team_ids
         super().__init__(
             hass, _LOGGER, name="PagerDuty", update_interval=update_interval
         )
@@ -43,6 +45,12 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             services = await self.hass.async_add_executor_job(
                 self.fetch_services, team_ids
             )
+            if self.ignored_team_ids:
+                services = [
+                    s
+                    for s in services
+                    if s["team_id"] not in self.ignored_team_ids
+                ]
             service_ids = [service["id"] for service in services]
             incidents = await self.hass.async_add_executor_job(
                 self.fetch_incidents, service_ids

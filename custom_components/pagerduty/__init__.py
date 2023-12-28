@@ -36,15 +36,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: config_entries.ConfigEntry
+    hass: core.HomeAssistant, entry: config_entries.ConfigEntry
 ) -> bool:
     """Set up PagerDuty from a config entry."""
     api_key = entry.data[CONF_API_KEY]
-    update_interval = entry.options.get("update_interval", UPDATE_INTERVAL)
+    update_interval = entry.data.get("update_interval", UPDATE_INTERVAL)
+    ignored_team_ids = entry.data.get("ignored_team_ids", "").split(",")
+    api_base_url = entry.data.get("api_base_url")
+    session = APISession(api_key, api_base_url=api_base_url)
 
-    session = APISession(api_key)
     coordinator = PagerDutyDataUpdateCoordinator(
-        hass, session, update_interval
+        hass, session, update_interval, ignored_team_ids
     )
 
     await coordinator.async_first_config_entry()
