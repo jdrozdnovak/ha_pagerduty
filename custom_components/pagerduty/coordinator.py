@@ -16,6 +16,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         self.session = session
         self.ignored_team_ids = ignored_team_ids
         _LOGGER.debug(f"Ignored teams: {ignored_team_ids}")
+        
         super().__init__(
             hass, _LOGGER, name="PagerDuty", update_interval=update_interval
         )
