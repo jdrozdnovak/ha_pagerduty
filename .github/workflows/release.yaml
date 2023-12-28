@@ -3,9 +3,8 @@ name: Automated Release Workflow
 on:
   push:
     branches:
-      - '**'
-    branches-ignore:
-      - 'main'
+        - '**'
+        - '!main'
     paths:
       - 'custom_components/**'
 
