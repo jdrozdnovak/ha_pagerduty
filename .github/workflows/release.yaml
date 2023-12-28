@@ -1,0 +1,85 @@
+name: Automated Release Workflow
+
+on:
+  push:
+    branches:
+      - '**'
+    branches-ignore:
+      - 'main'
+    paths:
+      - 'custom_components/**'
+
+jobs:
+  update-manifest-and-release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Update manifest.json with new version
+        run: |
+          VERSION_TAG=${GITHUB_REF##*/}
+          jq '.version = "'$VERSION_TAG'"' custom_components/pagerduty/manifest.json > temp.json && mv temp.json custom_components/pagerduty/manifest.json
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add custom_components/pagerduty/manifest.json
+          git commit -m "Update version in manifest to $VERSION_TAG"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  beta-release:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Create or Overwrite Beta Release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: beta-${{ github.head_ref }}
+          name: Beta Release for ${{ github.head_ref }}
+          allowUpdates: true
+          prerelease: true
+
+  purge-beta-releases:
+    if: github.ref == 'refs/heads/main'
+    needs: beta-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge Beta Releases
+        run: |
+          PR_BRANCH_NAME="${{ github.head_ref }}"
+          BETA_PREFIX="beta-"
+          
+          releases=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases" | \
+            jq -r '.[] | select(.tag_name | startswith("'"$BETA_PREFIX$PR_BRANCH_NAME"'")) | .id')
+
+          for release in $releases; do
+            curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/$release"
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  latest-release:
+    if: github.ref == 'refs/heads/main'
+    needs: [beta-release, purge-beta-releases]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Create Latest Release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: latest-${{ github.run_id }}
+          name: Latest Release - ${{ github.event.pull_request.title }}
+          body: ${{ github.event.pull_request.body }}
+          draft: false
+          prerelease: false
