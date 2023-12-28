@@ -32,7 +32,7 @@ jobs:
             PRERELEASE: true
             WITH_V: true
             DEFAULT_BUMP: "patch"
-            PRERELEASE_SUFFIX: beta${{ github.event.number }}_${{ github.run_number }}
+            PRERELEASE_SUFFIX: beta.${{ github.run_number }}
     
       - name: Create or Overwrite Beta Release
         uses: ncipollo/release-action@v1

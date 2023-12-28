@@ -85,7 +85,6 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             }
         except Exception as e:
             _LOGGER.error(f"Error communicating with PagerDuty API: {e}")
-
             raise UpdateFailed(f"Error communicating with API: {e}")
 
     def fetch_user(self):
