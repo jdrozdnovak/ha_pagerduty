@@ -34,6 +34,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             user = await self.hass.async_add_executor_job(self.fetch_user)
             _LOGGER.debug(f"Fetched user: {user}")
+
             user_id = user.get("id")
             _LOGGER.debug(f"User ID: {user_id}")
 
@@ -51,6 +52,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
                 self.fetch_services, team_ids
             )
             _LOGGER.debug(f"Existing services: {services}")
+
             cleaned_ignored_team_ids = [
                 team_id.strip() for team_id in self.ignored_team_ids.split(",")
             ]
@@ -66,12 +68,13 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             else:
                 filtered_services = services
             _LOGGER.debug(f"Filtered services: {filtered_services}")
+
             service_ids = [service["id"] for service in filtered_services]
             _LOGGER.debug(f"Service IDs: {service_ids}")
+
             incidents = await self.hass.async_add_executor_job(
                 self.fetch_incidents, service_ids
             )
-
             _LOGGER.debug(f"Fetched incidents: {incidents}")
 
             return {

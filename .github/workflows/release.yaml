@@ -7,6 +7,7 @@ on:
         - '!main'
     paths:
       - 'custom_components/**'
+  pull_request:
 
 permissions:
   contents: write
