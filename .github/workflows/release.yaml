@@ -17,25 +17,6 @@ permissions:
   contents: write
 
 jobs:
-  update-manifest-and-release:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Update manifest.json with new version
-        run: |
-          VERSION_TAG=${GITHUB_REF##*/}
-          jq '.version = "'$VERSION_TAG'"' custom_components/pagerduty/manifest.json > temp.json && mv temp.json custom_components/pagerduty/manifest.json
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add custom_components/pagerduty/manifest.json
-          git commit -m "Update version in manifest to $VERSION_TAG"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   beta-release:
     if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -51,7 +32,7 @@ jobs:
             PRERELEASE: true
             WITH_V: true
             DEFAULT_BUMP: "patch"
-            PRERELEASE_SUFFIX: beta${{ github.event.number }}_${{ github.run_number }}
+            PRERELEASE_SUFFIX: beta.${{ github.run_number }}
     
       - name: Create or Overwrite Beta Release
         uses: ncipollo/release-action@v1
@@ -85,7 +66,7 @@ jobs:
 
   latest-release:
     if: github.event.pull_request.merged == true
-    needs: [beta-release, purge-beta-releases, update-manifest-and-release]
+    needs: [purge-beta-releases]
     runs-on: ubuntu-latest
     steps:
       - name: Check out code

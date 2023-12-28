@@ -1,16 +1,12 @@
 {
-  "domain": "pagerduty",
-  "name": "pagerduty",
-  "codeowners": [
-    "@jdrozdnovak"
-  ],
-  "config_flow": true,
-  "dependencies": [],
-  "documentation": "https://github.com/jdrozdnovak/ha_pagerduty",
-  "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/jdrozdnovak/ha_pagerduty/issues",
-  "requirements": [
-    "pdpyras==5.1.3"
-  ],
-  "version": "main"
+	"domain": "pagerduty",
+	"name": "pagerduty",
+	"codeowners": [ "@jdrozdnovak" ],
+	"config_flow": true,
+	"dependencies": [],
+	"documentation": "https://github.com/jdrozdnovak/ha_pagerduty",
+	"iot_class": "cloud_polling",
+	"issue_tracker": "https://github.com/jdrozdnovak/ha_pagerduty/issues",
+	"requirements": ["pdpyras==5.1.3"],
+	"version": "v0.0.1"
 }

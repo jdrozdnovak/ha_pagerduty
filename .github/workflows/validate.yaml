@@ -2,9 +2,11 @@ name: Validate
 
 on:
   push:
-    paths:
-      - 'custom_components/**'
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
