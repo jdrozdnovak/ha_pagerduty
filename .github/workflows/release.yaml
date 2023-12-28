@@ -37,15 +37,24 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-
+    
+      - name: Bump version and push tag (Beta)
+        id: bump_beta_version
+        uses: anothrNick/github-tag-action@1.64.0
+        with:
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            tag_prefix: "beta-"  # Prefix for beta tags
+            release_branches: "feature/*,hotfix/*" # Example, adjust as per your branching strategy
+            default_bump: minor # Example bump type, adjust as needed
+    
       - name: Create or Overwrite Beta Release
         uses: ncipollo/release-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: beta-${{ github.head_ref }}
-          name: Beta Release for ${{ github.head_ref }}
-          allowUpdates: true
-          prerelease: true
+            token: ${{ secrets.GITHUB_TOKEN }}
+            tag: ${{ steps.bump_beta_version.outputs.new_tag }}
+            name: Beta Release - ${{ steps.bump_beta_version.outputs.new_tag }}
+            allowUpdates: true
+            prerelease: true
 
   purge-beta-releases:
     if: github.ref == 'refs/heads/main'
@@ -75,13 +84,32 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-
+    
+      - name: Bump version and push tag (Latest)
+        id: bump_latest_version
+        uses: anothrNick/github-tag-action@1.64.0
+        with:
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            # Additional configuration for tag format and versioning scheme
+    
+      - name: Update manifest.json with new version
+        run: |
+            VERSION_TAG=${{ steps.bump_latest_version.outputs.new_tag }}
+            jq '.version = "'$VERSION_TAG'"' custom_components/pagerduty/manifest.json > temp.json && mv temp.json custom_components/pagerduty/manifest.json
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add custom_components/pagerduty/manifest.json
+            git commit -m "Update version in manifest to $VERSION_TAG"
+            git push
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
       - name: Create Latest Release
         uses: ncipollo/release-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: latest-${{ github.run_id }}
-          name: Latest Release - ${{ github.event.pull_request.title }}
-          body: ${{ github.event.pull_request.body }}
-          draft: false
-          prerelease: false
+            token: ${{ secrets.GITHUB_TOKEN }}
+            tag: ${{ steps.bump_latest_version.outputs.new_tag }}
+            name: "Release ${{ steps.bump_latest_version.outputs.new_tag }}"
+            body: "Release description here"
+            draft: false
+            prerelease: false
