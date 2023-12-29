@@ -22,14 +22,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
     for service in services_data:
         service_id = service["id"]
         service_name = service["summary"]
-        team_name = service.get("team_name", "")
+        team_name = service.get("team_name", None)
+        team_id = service.get("team_id", None)
         if team_name:
             _LOGGER.debug("User is part of team, using team_name")
             sensor_name = f"PD-{team_name}-{service_name}"
         else:
             _LOGGER.debug("Skipping team name")
             sensor_name = f"PD-{service_name}"
-        sensor = PagerDutyIncidentSensor(coordinator, service_id, sensor_name)
+        sensor = PagerDutyIncidentSensor(
+            coordinator, service_id, sensor_name, team_id
+        )
         sensors.append(sensor)
 
     total_incidents_sensor = PagerDutyTotalIncidentsSensor(coordinator)
@@ -44,13 +47,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
-    def __init__(self, coordinator, service_id, sensor_name):
+    def __init__(self, coordinator, service_id, sensor_name, team_id):
         super().__init__(coordinator)
         _LOGGER.debug("Initializing PagerDutyIncidentSensor: %s", sensor_name)
         self._service_id = service_id
         self._attr_name = sensor_name
         self._incidents_count = None
-        self._attr_unique_id = f"pagerduty_{service_id}"
+        if team_id:
+            self._attr_unique_id = f"pagerduty_{team_id}_{service_id}"
+        else:
+            self._attr_unique_id = f"pagerduty_{service_id}"
         self._urgency_counts = defaultdict(int)
         self._status_counts = defaultdict(int)
 
