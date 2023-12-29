@@ -145,6 +145,9 @@ class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
         self._attr_name = "PagerDuty Assigned Incidents"
         self._assigned_incidents_count = None
         self._attr_unique_id = f"pagerduty_assigned_{user_id}"
+        self._assigned_incidents = []
+        self._urgency_counts = defaultdict(int)
+        self._status_counts = defaultdict(int)
         _LOGGER.debug(
             f"Initializing PagerDutyAssignedIncidentsSensor for user {user_id}"
         )
@@ -161,6 +164,16 @@ class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
     def state_class(self):
         return "measurement"
 
+    @property
+    def extra_state_attributes(self):
+        return {
+            "incidents": self._assigned_incidents,
+            "urgency_low": self._urgency_counts["low"],
+            "urgency_high": self._urgency_counts["high"],
+            "status_triggered": self._status_counts["triggered"],
+            "status_acknowledged": self._status_counts["acknowledged"],
+        }
+
     def _handle_coordinator_update(self):
         _LOGGER.debug(
             f'Updating PagerDutyAssignedIncidentsSensor Incidents:{self.coordinator.data.get("incidents", [])}'
@@ -171,8 +184,34 @@ class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
             for assignee in incident.get("assignments", [])
             if assignee.get("assignee", {}).get("id") == self._user_id
         ]
+
+        self._assigned_incidents.clear()
+        for incident in assigned_incidents:
+            urgency = incident.get("urgency", "unknown")
+            status = incident.get("status", "unknown")
+            self._urgency_counts[urgency] += 1
+            self._status_counts[status] += 1
+            incident_to_add = {}
+            if (
+                "service" in incident
+                and incident["service"] is not None
+                and "summary" in incident["service"]
+            ):
+                incident_to_add.update(
+                    {"impacted_service": incident["service"]["summary"]}
+                )
+
+            if "title" in incident:
+                incident_to_add.update({"title": incident["title"]})
+
+            if "description" in incident:
+                incident_to_add.update({"description": incident["description"]})
+
+            if "status" in incident:
+                incident_to_add.update({"status": incident["status"]})
+
+            self._assigned_incidents.append(incident_to_add)
+
         self._assigned_incidents_count = len(assigned_incidents)
-        _LOGGER.debug(
-            f"Assigned incidents count: {self._assigned_incidents_count}"
-        )
+        _LOGGER.debug(f"Assigned incidents count: {self._assigned_incidents_count}")
         super()._handle_coordinator_update()
