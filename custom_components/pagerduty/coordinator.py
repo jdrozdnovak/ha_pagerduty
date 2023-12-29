@@ -76,7 +76,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             incidents = await self.hass.async_add_executor_job(
                 self.fetch_incidents, service_ids
             )
-            _LOGGER.debug(f"Fetched incidents: {incidents}")
+            _LOGGER.debug(f"Fetched incidents. Sample: {incidents[0]}")
 
             return {
                 "on_calls": on_calls,
