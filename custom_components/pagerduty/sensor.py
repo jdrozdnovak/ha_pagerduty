@@ -35,7 +35,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
         )
         sensors.append(sensor)
 
-    total_incidents_sensor = PagerDutyTotalIncidentsSensor(coordinator)
+    total_incidents_sensor = PagerDutyTotalIncidentsSensor(
+        coordinator, user_id
+    )
     sensors.append(total_incidents_sensor)
 
     assigned_incidents_sensor = PagerDutyAssignedIncidentsSensor(
@@ -102,11 +104,11 @@ class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
 
 
 class PagerDutyTotalIncidentsSensor(SensorEntity, CoordinatorEntity):
-    def __init__(self, coordinator):
+    def __init__(self, coordinator, user_id):
         super().__init__(coordinator)
         _LOGGER.debug("Initializing PagerDutyTotalIncidentsSensor")
         self._attr_name = "PagerDuty Total Incidents"
-        self._attr_unique_id = "pagerduty_total_incidents"
+        self._attr_unique_id = f"pagerduty_total_incidents{user_id}"
         self._total_incidents = None
         self._urgency_counts = defaultdict(int)
         self._status_counts = defaultdict(int)
