@@ -8,7 +8,12 @@
 
 A custom component designed for [Home Assistant](https://www.home-assistant.io) to integrate with PagerDuty, providing insights and controls over incidents and on-call schedules.
 
-### Features
+## PagerDuty license requirements
+
+At the moment, code requires advanced-permissions option, which is only available in **Business** and **Digital Operations** plans  
+The plan is to add support for account-level access token later
+
+## Features
 
 - Monitor PagerDuty services and incidents.
 - View on-call schedule of the API ovner.
@@ -16,10 +21,11 @@ A custom component designed for [Home Assistant](https://www.home-assistant.io) 
 - Support for multiple PagerDuty teams.
 - Allow notification to a service
 
-### Install with HACS (recommended)
+## Install with HACS (recommended)
+
 If you have [HACS][hacs] installed, search for the PagerDuty Integration and install it directly from HACS. HACS will manage updates, allowing you to easily keep track of the latest versions.
 
-### Manual Installation
+## Manual Installation
 
 1. Open the directory (folder) for your HA configuration (where `configuration.yaml` is located).
 2. Create a `custom_components` directory if it doesn't already exist.
@@ -29,11 +35,11 @@ If you have [HACS][hacs] installed, search for the PagerDuty Integration and ins
 6. Restart Home Assistant.
 7. In the HA UI, go to "Configuration" -> "Integrations" click "+" and search for "PagerDuty".
 
-### Configuration
+## Configuration
 
 Once installed, configure the integration with your PagerDuty API token through the Home Assistant UI.
 
-### Use of notifications
+## Use of notifications
 
 The service ID you can get from the URL when checking the service.  
 The integration will create a new integration_key in PD with Home Assistant name, no need to fiddle with integration_key
@@ -46,14 +52,12 @@ data:
         service_id: "specific_service_id"
 ```
 
-### Contributions
+## Contributions
 
 Contributions to the project are welcome!
 
 ---
 
-[commits-shield]: https://img.shields.io/github/commit-activity/y/jdrozdnovak/ha_pagerduty.svg?style=for-the-badge
-[commits]: https://github.com/jdrozdnovak/ha_pagerduty/commits/main
 [hacs]: https://hacs.xyz
 [hacsbadge]: https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge
 [maintenance-shield]: https://img.shields.io/badge/maintainer-%40jdrozdnovak-blue.svg?style=for-the-badge
