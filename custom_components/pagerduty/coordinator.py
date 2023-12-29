@@ -16,7 +16,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         self.session = session
         self.ignored_team_ids = ignored_team_ids
         _LOGGER.debug(f"Ignored teams: {ignored_team_ids}")
-        
+
         super().__init__(
             hass, _LOGGER, name="PagerDuty", update_interval=update_interval
         )
@@ -102,17 +102,16 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     def fetch_services(self, team_ids):
         """Fetch services for given team IDs."""
         all_services = []
-        services = self.session.list_all("services", params={})
-        for service in services:
-            if "teams" in service:
-                if len(service["teams"]) == 0:
-                    service["team_name"] = "Unknown"
-                    all_services.append(service)
-                for team in service["teams"]:
-                    if "id" in team and team["id"] in team_ids:
-                        service["team_name"] = self.teams.get(team["id"], "Unknown")
-                        all_services.append(service)
-                        break
+        if team_ids:
+            for team_id in team_ids:
+                services = self.session.list_all(
+                    "services", params={"team_ids[]": team_id}
+                )
+                for service in services:
+                    service["team_name"] = self.teams.get(team_id, "Unknown")
+                all_services.extend(services)
+        else:
+            all_services = self.session.list_all("services")
         return all_services
 
     def fetch_incidents(self, service_ids):

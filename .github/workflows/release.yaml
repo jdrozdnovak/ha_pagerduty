@@ -48,27 +48,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Purge Beta Releases
-        run: |
-            MERGED_BRANCH="${{ github.event.pull_request.head.ref }}"
-    
-            releases=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases" | \
-            jq -r --arg BRANCH "$MERGED_BRANCH" '.[] | select(.target_commitish == $BRANCH) | "\(.id) \(.tag_name)"')
-
-            for release in $releases; do
-                release_id=$(echo $release | cut -d ' ' -f1)
-                tag_name=$(echo $release | cut -d ' ' -f2)
-
-                curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
-                    "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/$release_id"
-                echo "Deleted Release $release_id"
-
-                curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
-                    "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs/tags/$tag_name"
-                echo "Deleted Tag $tag_name"
-            done
+        run: .github/workflows/purge.sh
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            MERGED_BRANCH: ${{ github.event.pull_request.head.ref }}
+            GITHUB_REPOSITORY: ${{ github.repository }}
               
 
   latest-release:
