@@ -52,7 +52,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             services = await self.hass.async_add_executor_job(
                 self.fetch_services, team_ids
             )
-            _LOGGER.debug(f"Existing services. Sample {services[0]}")
+            _LOGGER.debug(f"Existing services. Sample {services[:2]}")
 
             cleaned_ignored_team_ids = [
                 team_id.strip() for team_id in self.ignored_team_ids.split(",")
@@ -68,7 +68,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
                 ]
             else:
                 filtered_services = services
-            _LOGGER.debug(f"Filtered services: {filtered_services}")
+            _LOGGER.debug(f"Filtered services: {filtered_services[:2]}")
 
             service_ids = [service["id"] for service in filtered_services]
             _LOGGER.debug(f"Service IDs: {service_ids}")
@@ -76,7 +76,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             incidents = await self.hass.async_add_executor_job(
                 self.fetch_incidents, service_ids
             )
-            _LOGGER.debug(f"Fetched incidents. Sample: {incidents[0]}")
+            _LOGGER.debug(f"Fetched incidents. Sample: {incidents[:2]}")
 
             return {
                 "on_calls": on_calls,

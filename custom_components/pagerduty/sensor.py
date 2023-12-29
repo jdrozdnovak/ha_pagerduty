@@ -190,7 +190,7 @@ class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
             if assignee.get("assignee", {}).get("id") == self._user_id
         ]
         _LOGGER.debug(
-            f"Updating PagerDutyAssignedIncidentsSensor Incidents. Sample: {assigned_incidents[0]}"
+            f"Updating PagerDutyAssignedIncidentsSensor Incidents. Sample: {assigned_incidents[:2]}"
         )
         self._urgency_counts = defaultdict(int)
         self._status_counts = defaultdict(int)
