@@ -52,7 +52,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             services = await self.hass.async_add_executor_job(
                 self.fetch_services, team_ids
             )
-            _LOGGER.debug(f"Existing services: {services}")
+            _LOGGER.debug(f"Existing services. Sample {services[0]}")
 
             cleaned_ignored_team_ids = [
                 team_id.strip() for team_id in self.ignored_team_ids.split(",")
