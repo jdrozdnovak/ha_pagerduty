@@ -183,15 +183,15 @@ class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
         }
 
     def _handle_coordinator_update(self):
-        _LOGGER.debug(
-            f'Updating PagerDutyAssignedIncidentsSensor Incidents:{self.coordinator.data.get("incidents", [])}'
-        )
         assigned_incidents = [
             incident
             for incident in self.coordinator.data.get("incidents", [])
             for assignee in incident.get("assignments", [])
             if assignee.get("assignee", {}).get("id") == self._user_id
         ]
+        _LOGGER.debug(
+            f"Updating PagerDutyAssignedIncidentsSensor Incidents. Sample: {assigned_incidents[0]}"
+        )
         self._urgency_counts = defaultdict(int)
         self._status_counts = defaultdict(int)
         self._assigned_incidents.clear()
@@ -209,17 +209,23 @@ class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
                 incident_to_add.update(
                     {"impacted_service": incident["service"]["summary"]}
                 )
+                _LOGGER.debug(
+                    f'"impacted_service": {incident["service"]["summary"]}'
+                )
 
             if "title" in incident:
                 incident_to_add.update({"title": incident["title"]})
+                _LOGGER.debug(f'"title": {incident["title"]}')
 
             if "description" in incident:
                 incident_to_add.update(
                     {"description": incident["description"]}
                 )
+                _LOGGER.debug(f'"description": {incident["description"]}')
 
             if "status" in incident:
                 incident_to_add.update({"status": incident["status"]})
+                _LOGGER.debug(f'"status": {incident["status"]}')
 
             self._assigned_incidents.append(incident_to_add)
 
