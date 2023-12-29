@@ -43,7 +43,7 @@ service: notify.pagerduty
 data:
     message: "Your message here"
     data:
-    service_id: "specific_service_id"
+        service_id: "specific_service_id"
 ```
 
 ### Contributions
