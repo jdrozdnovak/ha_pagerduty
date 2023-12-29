@@ -192,7 +192,8 @@ class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
             for assignee in incident.get("assignments", [])
             if assignee.get("assignee", {}).get("id") == self._user_id
         ]
-
+        self._urgency_counts = defaultdict(int)
+        self._status_counts = defaultdict(int)
         self._assigned_incidents.clear()
         for incident in assigned_incidents:
             urgency = incident.get("urgency", "unknown")
@@ -213,7 +214,9 @@ class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
                 incident_to_add.update({"title": incident["title"]})
 
             if "description" in incident:
-                incident_to_add.update({"description": incident["description"]})
+                incident_to_add.update(
+                    {"description": incident["description"]}
+                )
 
             if "status" in incident:
                 incident_to_add.update({"status": incident["status"]})
@@ -221,5 +224,7 @@ class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
             self._assigned_incidents.append(incident_to_add)
 
         self._assigned_incidents_count = len(assigned_incidents)
-        _LOGGER.debug(f"Assigned incidents count: {self._assigned_incidents_count}")
+        _LOGGER.debug(
+            f"Assigned incidents count: {self._assigned_incidents_count}"
+        )
         super()._handle_coordinator_update()
