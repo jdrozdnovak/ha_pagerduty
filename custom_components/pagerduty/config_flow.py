@@ -1,8 +1,8 @@
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY
-from .const import DOMAIN
 from pdpyras import APISession, PDClientError
+from .const import DOMAIN
 
 
 class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -14,7 +14,7 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors = {}
 
-        if user_input is not None:
+        if user_input: # <- what is this used for? Testing something?
             api_base_url = self._get_api_url(
                 user_input.get("api_server", "US")
             )
