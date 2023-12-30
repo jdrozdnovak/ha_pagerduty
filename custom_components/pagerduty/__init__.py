@@ -5,8 +5,7 @@ from homeassistant import config_entries, core
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import CONF_API_KEY, Platform, CONF_NAME
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import discovery
+from homeassistant.helpers import config_validation, discovery
 from datetime import timedelta
 from .const import DOMAIN
 from pdpyras import APISession
@@ -15,7 +14,7 @@ from .coordinator import PagerDutyDataUpdateCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
-CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+CONFIG_SCHEMA = config_validation.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

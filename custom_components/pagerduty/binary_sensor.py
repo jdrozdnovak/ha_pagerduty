@@ -24,7 +24,7 @@ class PagerDutyBinarySensor(BinarySensorEntity, CoordinatorEntity):
         super().__init__(coordinator)
         _LOGGER.debug("Initializing PagerDuty binary sensor")
         self._coordinator = coordinator
-        self._is_on_call = None
+        self._is_on_call = False
         self._attr_name = "PagerDuty On Call Status"
         self._attr_unique_id = f"pd_oncall_{user_id}"
 
