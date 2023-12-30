@@ -126,7 +126,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         on_call_params = {
             "user_ids[]": user_id,
             "time_zone": str(now.tzinfo),
-            "until": until_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "until": until_date.strftime("%Y-%m-%d"),
         }
         response = self.session.rget("/oncalls", params=on_call_params)
 
@@ -143,8 +143,8 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         schedules = []
         schedule_params = {
             "time_zone": time_zone,
-            "since": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "until": until_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "since": now.strftime("%Y-%m-%d"),
+            "until": until_date.strftime("%Y-%m-%d"),
         }
         for schedule_id in unique_schedule_ids:
             schedule_url = f"/schedules/{schedule_id}"
