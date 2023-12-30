@@ -47,9 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Purge Beta Releases
-        run: |
-          chmod +x ./purge.sh
-          ./purge.sh
+        run: bash ${GITHUB_WORKSPACE}/purge.sh
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             MERGED_BRANCH: ${{ github.event.pull_request.head.ref }}
@@ -58,7 +56,6 @@ jobs:
 
   latest-release:
     if: github.event.pull_request.merged == true
-    needs: [purge-beta-releases]
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
