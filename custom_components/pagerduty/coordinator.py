@@ -1,5 +1,6 @@
 import logging
-from datetime import timedelta
+from homeassistant.util import dt as dt_util
+from datetime import datetime, timedelta
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -94,10 +95,69 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
 
     def fetch_on_calls(self, user_id):
         """Fetch on-call data for the user."""
+        _LOGGER.debug(f"Fetching on-call data for user_id: {user_id}")
         if not user_id:
             return []
-        params = {"user_ids[]": user_id}
-        return self.session.rget("/oncalls", params=params)
+
+        now = dt_util.now()
+
+        until_date = now + timedelta(days=30)
+
+        params = {
+            "user_ids[]": user_id,
+            "time_zone": str(now.tzinfo),
+        }
+        on_calls = self.session.rget("/oncalls", params=params)
+
+        _LOGGER.debug(f"On-call data: {on_calls}")
+
+        return on_calls
+
+    def fetch_on_call_schedules(self, user_id, time_zone):
+        """Fetch on-call schedules based on user_id from PagerDuty."""
+        _LOGGER.debug(f"Fetching on-call schedules for user_id: {user_id}")
+
+        if not user_id:
+            return []
+
+        now = dt_util.now()
+        until_date = now + timedelta(days=30)
+
+        on_call_params = {
+            "user_ids[]": user_id,
+            "time_zone": str(now.tzinfo),
+            "until": until_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        response = self.session.rget("/oncalls", params=on_call_params)
+
+        on_calls_data = response if response else []
+
+        unique_schedule_ids = set()
+        for on_call in on_calls_data:
+            schedule_id = on_call.get("schedule", {}).get("id")
+            if schedule_id:
+                unique_schedule_ids.add(schedule_id)
+
+        _LOGGER.debug(f"Unique schedule IDs: {unique_schedule_ids}")
+
+        schedules = []
+        schedule_params = {
+            "time_zone": time_zone,
+            "since": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "until": until_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        for schedule_id in unique_schedule_ids:
+            schedule_url = f"/schedules/{schedule_id}"
+            schedule_data = self.session.rget(
+                schedule_url, params=schedule_params
+            )
+            if schedule_data:
+                schedules.append(schedule_data)
+                _LOGGER.debug(
+                    f"Fetched schedule for schedule_id {schedule_id}: {schedule_data}"
+                )
+
+        return schedules
 
     def fetch_services(self, team_ids):
         """Fetch services for given team IDs."""
