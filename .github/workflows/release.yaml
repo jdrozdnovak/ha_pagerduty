@@ -47,7 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Purge Beta Releases
-        run: .github/workflows/purge.sh
+        run: |
+          chmod +x ./purge.sh
+          ./purge.sh
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             MERGED_BRANCH: ${{ github.event.pull_request.head.ref }}
