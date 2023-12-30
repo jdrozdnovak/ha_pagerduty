@@ -3,8 +3,7 @@ name: Automated Release Workflow
 on:
   push:
     branches:
-        - '**'
-        - '!main'
+        - 'dev'
     paths:
       - 'custom_components/**'
   pull_request:
