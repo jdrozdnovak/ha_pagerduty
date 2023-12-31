@@ -35,7 +35,6 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_API_KEY): str,
-                    vol.Optional("update_interval", default=60): int,
                     vol.Optional("ignored_team_ids", default=""): str,
                     vol.Optional("api_server", default="US"): vol.In(
                         ["US", "EU"]

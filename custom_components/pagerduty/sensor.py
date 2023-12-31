@@ -1,5 +1,3 @@
-"""PagerDuty Service Incident Sensor for Home Assistant."""
-
 import logging
 from collections import defaultdict
 from homeassistant.components.sensor import SensorEntity
@@ -10,229 +8,161 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up the PagerDuty sensors from a config entry."""
+    """Set up PagerDuty sensors from a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     user_id = coordinator.data.get("user_id", "")
-    sensors = []
 
-    _LOGGER.debug("Setting up PagerDuty incident sensors")
+    # Static sensor descriptions
+    sensor_descriptions = [
+        {
+            "key": "total_incidents",
+            "name": "PagerDuty Total Incidents",
+            "value_fn": lambda data: len(data.get("incidents", [])),
+            "unique_id": f"pagerduty_total_incidents{user_id}",
+            "attribute_fn": lambda data: calculate_attributes(data, None),
+            "native_unit_of_measurement": "incidents",
+            "state_class": "measurement",
+        },
+        {
+            "key": "assigned_incidents",
+            "name": "PagerDuty Assigned Incidents",
+            "value_fn": lambda data: sum(
+                1
+                for incident in data.get("incidents", [])
+                for assignee in incident.get("assignments", [])
+                if assignee.get("assignee", {}).get("id") == user_id
+            ),
+            "unique_id": f"pagerduty_assigned_{user_id}",
+            "attribute_fn": lambda data: calculate_assigned_incidents_attributes(
+                data, user_id
+            ),
+            "native_unit_of_measurement": "incidents",
+            "state_class": "measurement",
+        },
+    ]
 
-    services_data = coordinator.data["services"]
-
+    # Dynamic sensor descriptions for each service
+    services_data = coordinator.data.get("services", [])
     for service in services_data:
         service_id = service["id"]
         service_name = service["summary"]
-        team_name = service.get("team_name", None)
-        team_id = service.get("team_id", None)
+        team_name = service["team_name"]
+        team_id = service["team_id"]
+        if team_id:
+            unique_id = f"pagerduty_{team_id}_{service_id}"
+        else:
+            unique_id = f"pagerduty_{service_id}"
         if team_name:
             _LOGGER.debug("User is part of team, using team_name")
             sensor_name = f"PD-{team_name}-{service_name}"
         else:
             _LOGGER.debug("Skipping team name")
             sensor_name = f"PD-{service_name}"
-        sensor = PagerDutyIncidentSensor(
-            coordinator, service_id, sensor_name, team_id
+        sensor_descriptions.append(
+            {
+                "key": f"service_{service_id}",
+                "name": sensor_name,
+                "value_fn": lambda data, service_id=service_id: sum(
+                    1
+                    for incident in data.get("incidents", [])
+                    if incident["service"]["id"] == service_id
+                ),
+                "unique_id": unique_id,
+                "attribute_fn": lambda data, service_id=service_id: calculate_attributes(
+                    data, service_id
+                ),
+                "native_unit_of_measurement": "incidents",
+                "state_class": "measurement",
+            }
         )
-        sensors.append(sensor)
 
-    total_incidents_sensor = PagerDutyTotalIncidentsSensor(
-        coordinator, user_id
-    )
-    sensors.append(total_incidents_sensor)
-
-    assigned_incidents_sensor = PagerDutyAssignedIncidentsSensor(
-        coordinator, user_id
-    )
-    sensors.append(assigned_incidents_sensor)
-
+    # Create sensor entities
+    sensors = [
+        PagerDutySensor(coordinator, desc) for desc in sensor_descriptions
+    ]
+    _LOGGER.debug("PagerDuty sensors created: %s", sensors)
     async_add_entities(sensors, True)
 
 
-class PagerDutyIncidentSensor(SensorEntity, CoordinatorEntity):
-    def __init__(self, coordinator, service_id, sensor_name, team_id):
-        super().__init__(coordinator)
-        _LOGGER.debug("Initializing PagerDutyIncidentSensor: %s", sensor_name)
-        self._service_id = service_id
-        self._attr_name = sensor_name
-        self._incidents_count = None
-        if team_id:
-            self._attr_unique_id = f"pagerduty_{team_id}_{service_id}"
-        else:
-            self._attr_unique_id = f"pagerduty_{service_id}"
-        self._urgency_counts = defaultdict(int)
-        self._status_counts = defaultdict(int)
+def calculate_attributes(data, service_id):
+    """Calculate attributes for a sensor."""
 
-    @property
-    def native_value(self):
-        return self._incidents_count
-
-    @property
-    def native_unit_of_measurement(self):
-        return "incidents"
-
-    @property
-    def state_class(self):
-        return "measurement"
-
-    @property
-    def extra_state_attributes(self):
-        return {
-            "urgency_low": self._urgency_counts["low"],
-            "urgency_high": self._urgency_counts["high"],
-            "status_triggered": self._status_counts["triggered"],
-            "status_acknowledged": self._status_counts["acknowledged"],
-        }
-
-    def _handle_coordinator_update(self):
-        _LOGGER.debug("Updating PagerDutyIncidentSensor: %s", self._attr_name)
-        incidents_data = self.coordinator.data.get("incidents", [])
-        self._incidents_count = sum(
-            1
-            for inc in incidents_data
-            if inc["service"]["id"] == self._service_id
-        )
-        self._urgency_counts = defaultdict(int)
-        self._status_counts = defaultdict(int)
-        for incident in incidents_data:
-            if incident["service"]["id"] == self._service_id:
-                urgency = incident.get("urgency", "unknown")
-                status = incident.get("status", "unknown")
-                self._urgency_counts[urgency] += 1
-                self._status_counts[status] += 1
-        _LOGGER.debug("PagerDutyIncidentSensor updated: %s", self._attr_name)
-        super()._handle_coordinator_update()
-
-
-class PagerDutyTotalIncidentsSensor(SensorEntity, CoordinatorEntity):
-    def __init__(self, coordinator, user_id):
-        super().__init__(coordinator)
-        _LOGGER.debug("Initializing PagerDutyTotalIncidentsSensor")
-        self._attr_name = "PagerDuty Total Incidents"
-        self._attr_unique_id = f"pagerduty_total_incidents{user_id}"
-        self._total_incidents = None
-        self._urgency_counts = defaultdict(int)
-        self._status_counts = defaultdict(int)
-
-    @property
-    def native_value(self):
-        return self._total_incidents
-
-    @property
-    def native_unit_of_measurement(self):
-        return "incidents"
-
-    @property
-    def state_class(self):
-        return "measurement"
-
-    @property
-    def extra_state_attributes(self):
-        return {
-            "urgency_low": self._urgency_counts["low"],
-            "urgency_high": self._urgency_counts["high"],
-            "status_triggered": self._status_counts["triggered"],
-            "status_acknowledged": self._status_counts["acknowledged"],
-        }
-
-    def _handle_coordinator_update(self):
-        _LOGGER.debug("Updating PagerDutyTotalIncidentsSensor")
-        self._total_incidents = len(self.coordinator.data.get("incidents", []))
-        self._urgency_counts = defaultdict(int)
-        self._status_counts = defaultdict(int)
-        for incident in self.coordinator.data.get("incidents", []):
+    urgency_counts = defaultdict(int)
+    status_counts = defaultdict(int)
+    for incident in data.get("incidents", []):
+        if service_id is None or incident["service"]["id"] == service_id:
             urgency = incident.get("urgency", "unknown")
             status = incident.get("status", "unknown")
-            self._urgency_counts[urgency] += 1
-            self._status_counts[status] += 1
-        _LOGGER.debug("PagerDutyTotalIncidentsSensor updated")
-        super()._handle_coordinator_update()
+            urgency_counts[urgency] += 1
+            status_counts[status] += 1
+    return {
+        "urgency_low": urgency_counts["low"],
+        "urgency_high": urgency_counts["high"],
+        "status_triggered": status_counts["triggered"],
+        "status_acknowledged": status_counts["acknowledged"],
+    }
 
 
-class PagerDutyAssignedIncidentsSensor(SensorEntity, CoordinatorEntity):
-    def __init__(self, coordinator, user_id):
+def calculate_assigned_incidents_attributes(data, user_id):
+    """Calculate attributes for assigned incidents."""
+    assigned_incidents = []
+    for incident in data.get("incidents", []):
+        for assignee in incident.get("assignments", []):
+            if assignee.get("assignee", {}).get("id") == user_id:
+                incident_to_add = {
+                    "impacted_service": incident["service"].get(
+                        "summary", "Unknown"
+                    )
+                    if "service" in incident
+                    else "Unknown",
+                    "title": incident.get("title", "Unknown"),
+                    "description": incident.get("description", "Unknown"),
+                    "status": incident.get("status", "Unknown"),
+                }
+                assigned_incidents.append(incident_to_add)
+    return {"assigned_incidents": assigned_incidents}
+
+
+class PagerDutySensor(SensorEntity, CoordinatorEntity):
+    """Generic sensor for PagerDuty incidents."""
+
+    def __init__(self, coordinator, description):
+        """Initialize the sensor."""
         super().__init__(coordinator)
-        self._user_id = user_id
-        self._attr_name = "PagerDuty Assigned Incidents"
-        self._assigned_incidents_count = None
-        self._attr_unique_id = f"pagerduty_assigned_{user_id}"
-        self._assigned_incidents = []
-        self._urgency_counts = defaultdict(int)
-        self._status_counts = defaultdict(int)
-        _LOGGER.debug(
-            f"Initializing PagerDutyAssignedIncidentsSensor for user {user_id}"
+        self._attr_name = description["name"]
+        self._value_fn = description["value_fn"]
+        self._attr_unique_id = description["unique_id"]
+        self._attribute_fn = description["attribute_fn"]
+        self._native_unit_of_measurement = description.get(
+            "native_unit_of_measurement"
         )
+        self._state_class = description.get("state_class")
+        _LOGGER.debug("Initialized PagerDuty sensor: %s", self._attr_name)
 
     @property
     def native_value(self):
-        return self._assigned_incidents_count
-
-    @property
-    def native_unit_of_measurement(self):
-        return "incidents"
-
-    @property
-    def state_class(self):
-        return "measurement"
+        """Return the state of the sensor."""
+        value = self._value_fn(self.coordinator.data)
+        _LOGGER.debug("Sensor '%s' native value: %s", self._attr_name, value)
+        return value
 
     @property
     def extra_state_attributes(self):
-        return {
-            "incidents": self._assigned_incidents,
-            "urgency_low": self._urgency_counts["low"],
-            "urgency_high": self._urgency_counts["high"],
-            "status_triggered": self._status_counts["triggered"],
-            "status_acknowledged": self._status_counts["acknowledged"],
-        }
-
-    def _handle_coordinator_update(self):
-        assigned_incidents = [
-            incident
-            for incident in self.coordinator.data.get("incidents", [])
-            for assignee in incident.get("assignments", [])
-            if assignee.get("assignee", {}).get("id") == self._user_id
-        ]
+        """Return additional state attributes."""
+        attributes = self._attribute_fn(self.coordinator.data)
         _LOGGER.debug(
-            f"Updating PagerDutyAssignedIncidentsSensor Incidents. Sample: {assigned_incidents[:2]}"
+            "Sensor '%s' extra state attributes: %s",
+            self._attr_name,
+            attributes,
         )
-        self._urgency_counts = defaultdict(int)
-        self._status_counts = defaultdict(int)
-        self._assigned_incidents.clear()
-        for incident in assigned_incidents:
-            urgency = incident.get("urgency", "unknown")
-            status = incident.get("status", "unknown")
-            self._urgency_counts[urgency] += 1
-            self._status_counts[status] += 1
-            incident_to_add = {}
-            if (
-                "service" in incident
-                and incident["service"] is not None
-                and "summary" in incident["service"]
-            ):
-                incident_to_add.update(
-                    {"impacted_service": incident["service"]["summary"]}
-                )
-                _LOGGER.debug(
-                    f'"impacted_service": {incident["service"]["summary"]}'
-                )
+        return attributes
 
-            if "title" in incident:
-                incident_to_add.update({"title": incident["title"]})
-                _LOGGER.debug(f'"title": {incident["title"]}')
+    @property
+    def native_unit_of_measurement(self):
+        """Return the unit of measurement."""
+        return self._native_unit_of_measurement
 
-            if "description" in incident:
-                incident_to_add.update(
-                    {"description": incident["description"]}
-                )
-                _LOGGER.debug(f'"description": {incident["description"]}')
-
-            if "status" in incident:
-                incident_to_add.update({"status": incident["status"]})
-                _LOGGER.debug(f'"status": {incident["status"]}')
-
-            self._assigned_incidents.append(incident_to_add)
-
-        self._assigned_incidents_count = len(assigned_incidents)
-        _LOGGER.debug(
-            f"Assigned incidents count: {self._assigned_incidents_count}"
-        )
-        super()._handle_coordinator_update()
+    @property
+    def state_class(self):
+        """Return the state class of the sensor."""
+        return self._state_class

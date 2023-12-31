@@ -1,29 +1,31 @@
 import logging
 from homeassistant.util import dt as dt_util
-from datetime import datetime, timedelta
+from datetime import timedelta
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
 )
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+SCAN_INTERVAL = timedelta(seconds=30)
 
 
 class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching PagerDuty data."""
 
-    def __init__(self, hass, session, update_interval, ignored_team_ids):
+    def __init__(self, hass, session, ignored_team_ids):
         """Initialize."""
         self.session = session
         self.ignored_team_ids = ignored_team_ids
         _LOGGER.debug(f"Ignored teams: {ignored_team_ids}")
 
         super().__init__(
-            hass, _LOGGER, name="PagerDuty", update_interval=update_interval
+            hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL
         )
 
     async def async_first_config_entry(self):
-        """Custom method to handle the first update of the config entry."""
+        """Handle the first update of the config entry."""
         try:
             await self.async_refresh()
         except UpdateFailed:
@@ -32,18 +34,13 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             )
 
     async def _async_update_data(self):
-        """Fetch data from API."""
+        """Fetch data from the PagerDuty API."""
         try:
             user = await self.hass.async_add_executor_job(self.fetch_user)
             _LOGGER.debug(f"Fetched user: {user}")
 
             user_id = user.get("id")
             _LOGGER.debug(f"User ID: {user_id}")
-
-            on_calls = await self.hass.async_add_executor_job(
-                self.fetch_on_calls, user_id
-            )
-            _LOGGER.debug(f"Fetched on calls: {on_calls}")
 
             self.teams = {
                 team["id"]: team["name"] for team in user.get("teams", [])
@@ -79,11 +76,17 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             )
             _LOGGER.debug(f"Fetched incidents. Sample: {incidents[:2]}")
 
+            on_call_schedules = await self.hass.async_add_executor_job(
+                self.fetch_on_call_schedules,
+                user_id,
+                str(dt_util.DEFAULT_TIME_ZONE),
+            )
+
             return {
-                "on_calls": on_calls,
+                "user_id": user_id,
                 "services": services,
                 "incidents": incidents,
-                "user_id": user_id,
+                "on_call_schedules": on_call_schedules,
             }
         except Exception as e:
             _LOGGER.error(f"Error communicating with PagerDuty API: {e}")
@@ -93,26 +96,6 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         """Fetch user data."""
         return self.session.rget("/users/me", params={"include[]": "teams"})
 
-    def fetch_on_calls(self, user_id):
-        """Fetch on-call data for the user."""
-        _LOGGER.debug(f"Fetching on-call data for user_id: {user_id}")
-        if not user_id:
-            return []
-
-        now = dt_util.now()
-
-        until_date = now + timedelta(days=30)
-
-        params = {
-            "user_ids[]": user_id,
-            "time_zone": str(now.tzinfo),
-        }
-        on_calls = self.session.rget("/oncalls", params=params)
-
-        _LOGGER.debug(f"On-call data: {on_calls}")
-
-        return on_calls
-
     def fetch_on_call_schedules(self, user_id, time_zone):
         """Fetch on-call schedules based on user_id from PagerDuty."""
         _LOGGER.debug(f"Fetching on-call schedules for user_id: {user_id}")
@@ -121,7 +104,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             return []
 
         now = dt_util.now()
-        until_date = now + timedelta(days=30)
+        until_date = now + timedelta(days=14)
 
         on_call_params = {
             "user_ids[]": user_id,
@@ -161,30 +144,29 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
 
     def fetch_services(self, team_ids):
         """Fetch services for given team IDs."""
-        all_services = []
         if team_ids:
-            for team_id in team_ids:
-                services = self.session.list_all(
-                    "services", params={"team_ids[]": team_id}
-                )
-                for service in services:
-                    service["team_name"] = self.teams.get(team_id, "Unknown")
-                all_services.extend(services)
+            all_services = self.session.list_all(
+                "services",
+                params={"team_ids[]": team_ids, "include[]": "teams"},
+            )
+            for service in all_services:
+                first_team = service["teams"][0]
+                service["team_name"] = first_team.get("name", "Unknown")
+                service["team_id"] = first_team.get("id", "Unknown")
         else:
             all_services = self.session.list_all("services")
+
         return all_services
 
     def fetch_incidents(self, service_ids):
         """Fetch incidents for given service IDs."""
         all_incidents = []
-        for service_id in service_ids:
-            incidents = self.session.list_all(
-                "incidents",
-                params={
-                    "service_ids[]": service_id,
-                    "statuses[]": ["acknowledged", "triggered"],
-                    "include[]": "users",
-                },
-            )
-            all_incidents.extend(incidents)
+        all_incidents = self.session.list_all(
+            "incidents",
+            params={
+                "service_ids[]": service_ids,
+                "statuses[]": ["acknowledged", "triggered"],
+                "include[]": "users",
+            },
+        )
         return all_incidents

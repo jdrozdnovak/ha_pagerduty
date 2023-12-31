@@ -35,13 +35,7 @@ class PagerDutyCalendar(CalendarEntity):
 
     async def async_get_events(self, hass, start_date, end_date):
         """Return events between start_date and end_date."""
-        await self.coordinator.async_request_refresh()
-        
-        new_schedules = await hass.async_add_executor_job(
-            self.coordinator.fetch_on_call_schedules,
-            self.user_id,
-            str(dt_util.DEFAULT_TIME_ZONE),
-        )
+        new_schedules = self.coordinator.data.get("on_call_schedules", [])
 
         for schedule_details in new_schedules:
             schedule_entries = schedule_details.get("final_schedule", {}).get(
@@ -54,7 +48,12 @@ class PagerDutyCalendar(CalendarEntity):
                 if entry.get("user", {}).get("id") == self.user_id:
                     start = self._parse_datetime(entry.get("start"))
                     end = self._parse_datetime(entry.get("end"))
-                    if start and end and start <= end_date and end >= start_date:
+                    if (
+                        start
+                        and end
+                        and start <= end_date
+                        and end >= start_date
+                    ):
                         unique_id_part = self._get_unique_id_part(
                             entry, schedule_details["id"]
                         )
