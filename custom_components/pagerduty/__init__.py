@@ -16,6 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.CALENDAR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+SCAN_INTERVAL = timedelta(seconds=30)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -45,18 +46,17 @@ async def async_setup_entry(
     _LOGGER.debug(f"Setting up config entry: {entry}")
 
     api_key = entry.data[CONF_API_KEY]
-    update_interval = timedelta(seconds=entry.data.get("update_interval", 60))
     ignored_team_ids = entry.data.get("ignored_team_ids", "")
     api_base_url = entry.data.get("api_base_url")
     session = APISession(api_key)
     session.url = api_base_url
 
-    _LOGGER.debug(f"Update interval: {update_interval}")
+
     _LOGGER.debug(f"Ignored team IDs: {ignored_team_ids}")
     _LOGGER.debug(f"API base URL: {api_base_url}")
 
     coordinator = PagerDutyDataUpdateCoordinator(
-        hass, session, update_interval, ignored_team_ids
+        hass, session, ignored_team_ids
     )
 
     await coordinator.async_first_config_entry()

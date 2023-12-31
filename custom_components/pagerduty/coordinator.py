@@ -1,29 +1,31 @@
 import logging
 from homeassistant.util import dt as dt_util
-from datetime import datetime, timedelta
+from datetime import timedelta
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
 )
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+SCAN_INTERVAL = timedelta(seconds=30)
 
 
 class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching PagerDuty data."""
 
-    def __init__(self, hass, session, update_interval, ignored_team_ids):
+    def __init__(self, hass, session, ignored_team_ids):
         """Initialize."""
         self.session = session
         self.ignored_team_ids = ignored_team_ids
         _LOGGER.debug(f"Ignored teams: {ignored_team_ids}")
 
         super().__init__(
-            hass, _LOGGER, name="PagerDuty", update_interval=update_interval
+            hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL
         )
 
     async def async_first_config_entry(self):
-        """Custom method to handle the first update of the config entry."""
+        """Handle the first update of the config entry."""
         try:
             await self.async_refresh()
         except UpdateFailed:
@@ -32,7 +34,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             )
 
     async def _async_update_data(self):
-        """Fetch data from API."""
+        """Fetch data from the PagerDuty API."""
         try:
             user = await self.hass.async_add_executor_job(self.fetch_user)
             _LOGGER.debug(f"Fetched user: {user}")
@@ -79,11 +81,18 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             )
             _LOGGER.debug(f"Fetched incidents. Sample: {incidents[:2]}")
 
+            on_call_schedules = await self.hass.async_add_executor_job(
+                self.fetch_on_call_schedules,
+                user_id,
+                str(dt_util.DEFAULT_TIME_ZONE),
+            )
+
             return {
+                "user": user,
                 "on_calls": on_calls,
                 "services": services,
                 "incidents": incidents,
-                "user_id": user_id,
+                "on_call_schedules": on_call_schedules,
             }
         except Exception as e:
             _LOGGER.error(f"Error communicating with PagerDuty API: {e}")
@@ -100,8 +109,6 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             return []
 
         now = dt_util.now()
-
-        until_date = now + timedelta(days=30)
 
         params = {
             "user_ids[]": user_id,
@@ -121,7 +128,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             return []
 
         now = dt_util.now()
-        until_date = now + timedelta(days=30)
+        until_date = now + timedelta(days=14)
 
         on_call_params = {
             "user_ids[]": user_id,
