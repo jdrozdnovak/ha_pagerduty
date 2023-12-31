@@ -33,7 +33,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 if assignee.get("assignee", {}).get("id") == user_id
             ),
             "unique_id": f"pagerduty_assigned_{user_id}",
-            "attribute_fn": lambda data: calculate_attributes(data, user_id),
+            "attribute_fn": lambda data: calculate_assigned_incidents_attributes(
+                data, user_id
+            ),
             "native_unit_of_measurement": "incidents",
             "state_class": "measurement",
         },
@@ -101,6 +103,26 @@ def calculate_attributes(data, service_id):
     }
 
 
+def calculate_assigned_incidents_attributes(data, user_id):
+    """Calculate attributes for assigned incidents."""
+    assigned_incidents = []
+    for incident in data.get("incidents", []):
+        for assignee in incident.get("assignments", []):
+            if assignee.get("assignee", {}).get("id") == user_id:
+                incident_to_add = {
+                    "impacted_service": incident["service"].get(
+                        "summary", "Unknown"
+                    )
+                    if "service" in incident
+                    else "Unknown",
+                    "title": incident.get("title", "Unknown"),
+                    "description": incident.get("description", "Unknown"),
+                    "status": incident.get("status", "Unknown"),
+                }
+                assigned_incidents.append(incident_to_add)
+    return {"assigned_incidents": assigned_incidents}
+
+
 class PagerDutySensor(SensorEntity, CoordinatorEntity):
     """Generic sensor for PagerDuty incidents."""
 
@@ -111,10 +133,10 @@ class PagerDutySensor(SensorEntity, CoordinatorEntity):
         self._value_fn = description["value_fn"]
         self._attr_unique_id = description["unique_id"]
         self._attribute_fn = description["attribute_fn"]
-        self._native_unit_of_measurement = description[
+        self._native_unit_of_measurement = description.get(
             "native_unit_of_measurement"
-        ]
-        self._state_class = description["state_class"]
+        )
+        self._state_class = description.get("state_class")
         _LOGGER.debug("Initialized PagerDuty sensor: %s", self._attr_name)
 
     @property
