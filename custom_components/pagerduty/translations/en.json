@@ -20,7 +20,6 @@
                 "description": "Enter your API key to connect to PagerDuty.",
                 "data": {
                     "api_key": "API Key",
-                    "update_interval": "Update Interval (in seconds)",
                     "ignored_team_ids": "Ignored Team IDs (comma-separated)",
                     "api_server": "PagerDuty API Server"
                 }
