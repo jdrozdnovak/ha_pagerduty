@@ -16,8 +16,8 @@ The plan is to add support for account-level access token later
 ## Features
 
 - Monitor PagerDuty services and incidents.
-- View on-call schedule of the API ovner.
-- View assigned incident counts.
+- View on-call schedule of the API owner. + calendar integration
+- View assigned incident counts. + their details
 - Support for multiple PagerDuty teams.
 - Allow notification to a service
 
