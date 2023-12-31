@@ -42,11 +42,6 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             user_id = user.get("id")
             _LOGGER.debug(f"User ID: {user_id}")
 
-            on_calls = await self.hass.async_add_executor_job(
-                self.fetch_on_calls, user_id
-            )
-            _LOGGER.debug(f"Fetched on calls: {on_calls}")
-
             self.teams = {
                 team["id"]: team["name"] for team in user.get("teams", [])
             }
@@ -89,7 +84,6 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
 
             return {
                 "user_id": user_id,
-                "on_calls": on_calls,
                 "services": services,
                 "incidents": incidents,
                 "on_call_schedules": on_call_schedules,
@@ -152,7 +146,8 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
         """Fetch services for given team IDs."""
         if team_ids:
             all_services = self.session.list_all(
-                "services", params={"team_ids[]": team_ids, "include[]": "teams"}
+                "services",
+                params={"team_ids[]": team_ids, "include[]": "teams"},
             )
             for service in all_services:
                 first_team = service["teams"][0]
