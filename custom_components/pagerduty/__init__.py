@@ -51,7 +51,6 @@ async def async_setup_entry(
     session = APISession(api_key)
     session.url = api_base_url
 
-
     _LOGGER.debug(f"Ignored team IDs: {ignored_team_ids}")
     _LOGGER.debug(f"API base URL: {api_base_url}")
 

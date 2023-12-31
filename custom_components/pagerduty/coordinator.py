@@ -88,7 +88,7 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             )
 
             return {
-                "user": user,
+                "user_id": user_id,
                 "on_calls": on_calls,
                 "services": services,
                 "incidents": incidents,
@@ -101,24 +101,6 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
     def fetch_user(self):
         """Fetch user data."""
         return self.session.rget("/users/me", params={"include[]": "teams"})
-
-    def fetch_on_calls(self, user_id):
-        """Fetch on-call data for the user."""
-        _LOGGER.debug(f"Fetching on-call data for user_id: {user_id}")
-        if not user_id:
-            return []
-
-        now = dt_util.now()
-
-        params = {
-            "user_ids[]": user_id,
-            "time_zone": str(now.tzinfo),
-        }
-        on_calls = self.session.rget("/oncalls", params=params)
-
-        _LOGGER.debug(f"On-call data: {on_calls}")
-
-        return on_calls
 
     def fetch_on_call_schedules(self, user_id, time_zone):
         """Fetch on-call schedules based on user_id from PagerDuty."""
@@ -168,30 +150,28 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
 
     def fetch_services(self, team_ids):
         """Fetch services for given team IDs."""
-        all_services = []
         if team_ids:
-            for team_id in team_ids:
-                services = self.session.list_all(
-                    "services", params={"team_ids[]": team_id}
-                )
-                for service in services:
-                    service["team_name"] = self.teams.get(team_id, "Unknown")
-                all_services.extend(services)
+            all_services = self.session.list_all(
+                "services", params={"team_ids[]": team_ids, "include[]": "teams"}
+            )
+            for service in all_services:
+                first_team = service["teams"][0]
+                service["team_name"] = first_team.get("name", "Unknown")
+                service["team_id"] = first_team.get("id", "Unknown")
         else:
             all_services = self.session.list_all("services")
+
         return all_services
 
     def fetch_incidents(self, service_ids):
         """Fetch incidents for given service IDs."""
         all_incidents = []
-        for service_id in service_ids:
-            incidents = self.session.list_all(
-                "incidents",
-                params={
-                    "service_ids[]": service_id,
-                    "statuses[]": ["acknowledged", "triggered"],
-                    "include[]": "users",
-                },
-            )
-            all_incidents.extend(incidents)
+        all_incidents = self.session.list_all(
+            "incidents",
+            params={
+                "service_ids[]": service_ids,
+                "statuses[]": ["acknowledged", "triggered"],
+                "include[]": "users",
+            },
+        )
         return all_incidents
