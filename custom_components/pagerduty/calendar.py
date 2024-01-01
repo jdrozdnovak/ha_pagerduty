@@ -5,12 +5,10 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the calendar entry."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
     async_add_entities([PagerDutyCalendar(coordinator)], True)
-
 
 class PagerDutyCalendar(CalendarEntity):
     """Representation of a PagerDuty calendar."""
@@ -23,19 +21,10 @@ class PagerDutyCalendar(CalendarEntity):
         self._attr_unique_id = f"pd_oncall_calendar_{self.user_id}"
         self._events = []
 
-    @property
-    def name(self):
-        """Return the name of the calendar."""
-        return self._attr_name
-
-    @property
-    def unique_id(self):
-        """Return a unique ID for this calendar."""
-        return self._attr_unique_id
-
     async def async_get_events(self, hass, start_date, end_date):
         """Return events between start_date and end_date."""
         new_schedules = self.coordinator.data.get("on_call_schedules", [])
+        temp_events = []
 
         for schedule_details in new_schedules:
             schedule_entries = schedule_details.get("final_schedule", {}).get(
@@ -48,43 +37,45 @@ class PagerDutyCalendar(CalendarEntity):
                 if entry.get("user", {}).get("id") == self.user_id:
                     start = self._parse_datetime(entry.get("start"))
                     end = self._parse_datetime(entry.get("end"))
-                    if (
-                        start
-                        and end
-                        and start <= end_date
-                        and end >= start_date
-                    ):
-                        unique_id_part = self._get_unique_id_part(
-                            entry, schedule_details["id"]
-                        )
-                        uid = f"{schedule_details['id']}-{unique_id_part}"
-                        event = CalendarEvent(
-                            summary=schedule_details["name"],
-                            start=start,
-                            end=end,
-                            location=entry["user"]["summary"],
-                            description=f"Schedule ID: {schedule_details['id']}",
-                            uid=uid,
-                        )
-                        self._update_or_add_event(event)
+                    if start and end and start <= end_date and end >= start_date:
+                        event = self._create_event(entry, schedule_details, start, end)
+                        temp_events.append(event)
 
+        self._events = self._rebuild_day_events(start_date, temp_events)
         return self._events
 
-    def _update_or_add_event(self, new_event):
-        """Update an existing event or add a new one based on UID."""
-        existing_uids = [event.uid for event in self._events]
-        if new_event.uid not in existing_uids:
-            self._events.append(new_event)
-        else:
-            for i, event in enumerate(self._events):
-                if event.uid == new_event.uid:
-                    self._events[i] = new_event
-                    break
+    def _create_event(self, entry, schedule_details, start, end):
+        """Create a new event from schedule entry."""
+        unique_id_part = self._get_unique_id_part(entry, schedule_details["id"])
+        uid = f"{schedule_details['id']}-{unique_id_part}"
+        return CalendarEvent(
+            summary=schedule_details["name"],
+            start=start,
+            end=end,
+            location=entry["user"]["summary"],
+            description=f"Schedule ID: {schedule_details['id']}",
+            uid=uid,
+        )
+
+    def _rebuild_day_events(self, start_date, temp_events):
+        """Rebuild events for each day if there are any changes."""
+        updated_events = []
+        for event in temp_events:
+            if event.start.date() >= start_date.date() and not self._event_exists(event):
+                updated_events.append(event)
+        return updated_events
+
+    def _event_exists(self, new_event):
+        """Check if the event already exists in the calendar."""
+        for event in self._events:
+            if event.uid == new_event.uid:
+                return True
+        return False
 
     def _get_unique_id_part(self, entry, schedule_id):
         """Generate a unique part of ID for each entry."""
         entry_date = self._parse_datetime(entry.get("start")).date()
-        return f"{schedule_id}-{entry_date}-{entry.get('id')}"
+        return f"{schedule_id}-{entry_date}"
 
     @staticmethod
     def _parse_datetime(date_str):
