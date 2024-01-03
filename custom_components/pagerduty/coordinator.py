@@ -47,28 +47,16 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             }
 
             team_ids = list(self.teams.keys())
-            services = await self.hass.async_add_executor_job(
-                self.fetch_services, team_ids
+
+            cleaned_ignored_team_ids = list(
+                set(team_ids) - set(self.ignored_team_ids)
             )
-            _LOGGER.debug(f"Existing services. Sample {services[:2]}")
+            services = await self.hass.async_add_executor_job(
+                self.fetch_services, cleaned_ignored_team_ids
+            )
+            _LOGGER.debug(f"Filtered services: {services[:2]}")
 
-            cleaned_ignored_team_ids = [
-                team_id.strip() for team_id in self.ignored_team_ids.split(",")
-            ]
-            if cleaned_ignored_team_ids:
-                filtered_services = [
-                    service
-                    for service in services
-                    if not any(
-                        team["id"] in cleaned_ignored_team_ids
-                        for team in service.get("teams", [])
-                    )
-                ]
-            else:
-                filtered_services = services
-            _LOGGER.debug(f"Filtered services: {filtered_services[:2]}")
-
-            service_ids = [service["id"] for service in filtered_services]
+            service_ids = [service["id"] for service in services]
             _LOGGER.debug(f"Service IDs: {service_ids}")
 
             incidents = await self.hass.async_add_executor_job(
