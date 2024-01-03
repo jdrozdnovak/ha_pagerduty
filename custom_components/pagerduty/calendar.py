@@ -17,7 +17,7 @@ class PagerDutyCalendarData:
 
     async def fetch_all_events(self):
         """Fetch all events from the coordinator data."""
-        self.events.clear()  # Clear existing events before fetching new ones
+        self.events.clear()
         new_schedules = self.coordinator.data.get("on_call_schedules", [])
         for schedule_details in new_schedules:
             self._process_schedule(schedule_details)
@@ -75,16 +75,17 @@ class PagerDutyCalendarData:
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the calendar entry."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
-    async_add_entities([PagerDutyCalendar(coordinator)], True)
+    user_id = coordinator.data.get("user_id", "")
+    async_add_entities([PagerDutyCalendar(coordinator, user_id)], True)
 
 
 class PagerDutyCalendar(CalendarEntity):
     """Representation of a PagerDuty calendar."""
 
-    def __init__(self, coordinator):
+    def __init__(self, coordinator, user_id):
         """Initialize the PagerDuty calendar."""
         self.coordinator = coordinator
-        self.user_id = self.coordinator.data.get("user_id")
+        self.user_id = user_id
         self._attr_name = "PagerDuty On-Call Schedule"
         self._attr_unique_id = f"pd_oncall_calendar_{self.user_id}"
         self.calendar_data = PagerDutyCalendarData(

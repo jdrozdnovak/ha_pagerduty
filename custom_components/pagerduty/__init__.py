@@ -7,7 +7,6 @@ from homeassistant.const import CONF_API_KEY, Platform, CONF_NAME
 from homeassistant.helpers import (
     discovery,
     config_validation,
-    device_registry,
     typing,
 )
 from datetime import timedelta
@@ -67,19 +66,6 @@ async def async_setup_entry(
         "coordinator": coordinator,
         "session": session,
     }
-
-    user_id = entry.data.get("user_id", "default_user_id")
-    unique_device_name = f"PagerDuty_{user_id}"
-
-    device_reg = device_registry.async_get(hass)
-    device = device_reg.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, unique_device_name)},
-        name=unique_device_name,
-        manufacturer="PagerDuty Inc.",
-    )
-
-    hass.data[DOMAIN][entry.entry_id]["device_id"] = device.id
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
