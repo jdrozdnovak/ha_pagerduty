@@ -9,29 +9,29 @@ permissions:
   contents: write
 
 jobs:
-  gamma-release:
+  alfa-release:
     if: github.event.pull_request.merged == false
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
         uses: actions/checkout@v4
     
-      - name: Bump version and push tag (Gamma)
-        id: bump_gamma_version
+      - name: Bump version and push tag (Alfa)
+        id: bump_alfa_version
         uses: anothrNick/github-tag-action@1.64.0
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             PRERELEASE: true
             WITH_V: true
             DEFAULT_BUMP: "patch"
-            PRERELEASE_SUFFIX: gamma.${{ github.run_number }}
+            PRERELEASE_SUFFIX: alfa.${{ github.run_number }}
     
-      - name: Create or Overwrite Gamma Release
+      - name: Create or Overwrite Alfa Release
         uses: ncipollo/release-action@v1
         with:
             token: ${{ secrets.GITHUB_TOKEN }}
-            tag: ${{ steps.bump_gamma_version.outputs.new_tag }}
-            name: Gamma Release - ${{ steps.bump_gamma_version.outputs.new_tag }}
+            tag: ${{ steps.bump_alfa_version.outputs.new_tag }}
+            name: Alfa Release - ${{ steps.bump_alfa_version.outputs.new_tag }}
             allowUpdates: true
             prerelease: true
 
@@ -46,11 +46,11 @@ jobs:
           ls -la
           pwd
 
-  purge-gamma-releases:
+  purge-alfa-releases:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - name: Purge Beta Releases
+      - name: Purge Alfa Releases
         run: bash ./purge.sh
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
