@@ -38,9 +38,9 @@ jobs:
   test-sh:
     runs-on: ubuntu-latest
     steps:
-      - name: Purge Beta Releases
+      - name: Test SH
         run: |
-          cd ..
+          cd ${{ github.workspace }}
           ls -la
           pwd
 
