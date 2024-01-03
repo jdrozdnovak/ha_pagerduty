@@ -46,6 +46,8 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
       - name: Purge Beta Releases
         run: bash ./purge.sh
         env:
@@ -74,6 +76,16 @@ jobs:
             WITH_V: true
             DEFAULT_BUMP: "minor"
 
+      - name: Create Latest Release
+        uses: ncipollo/release-action@v1
+        with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            tag: ${{ steps.bump_latest_version.outputs.new_tag }}
+            name: "Release ${{ steps.bump_latest_version.outputs.new_tag }}"
+            body: ${{ github.event.pull_request.body }}
+            draft: false
+            prerelease: false
+
       - name: Check out main
         uses: actions/checkout@v4
         with:
@@ -87,16 +99,7 @@ jobs:
             git config --local user.name "GitHub Action"
             git add custom_components/pagerduty/manifest.json
             git commit -m "Update version in manifest to $VERSION_TAG"
-            git push --force
+            git push --force origin main
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-      - name: Create Latest Release
-        uses: ncipollo/release-action@v1
-        with:
-            token: ${{ secrets.GITHUB_TOKEN }}
-            tag: ${{ steps.bump_latest_version.outputs.new_tag }}
-            name: "Release ${{ steps.bump_latest_version.outputs.new_tag }}"
-            body: ${{ github.event.pull_request.body }}
-            draft: false
-            prerelease: false
+
