@@ -38,6 +38,8 @@ jobs:
   test-sh:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
       - name: Test SH
         run: |
           cd ${{ github.workspace }}
