@@ -12,7 +12,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     user_id = coordinator.data.get("user_id", "")
 
-    # Static sensor descriptions
     sensor_descriptions = [
         {
             "key": "total_incidents",
@@ -41,7 +40,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
         },
     ]
 
-    # Dynamic sensor descriptions for each service
     services_data = coordinator.data.get("services", [])
     for service in services_data:
         service_id = service["id"]
@@ -76,7 +74,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
             }
         )
 
-    # Create sensor entities
     sensors = [
         PagerDutySensor(coordinator, desc) for desc in sensor_descriptions
     ]
@@ -138,6 +135,17 @@ class PagerDutySensor(SensorEntity, CoordinatorEntity):
         )
         self._state_class = description.get("state_class")
         _LOGGER.debug("Initialized PagerDuty sensor: %s", self._attr_name)
+
+    @property
+    def device_info(self):
+        """Return device info for linking this entity to the unique PagerDuty device."""
+        unique_device_name = f"PagerDuty_{self.coordinator.data.get('user_id', 'default_user_id')}"
+        return {
+            "identifiers": {(DOMAIN, unique_device_name)},
+            "name": unique_device_name,
+            "manufacturer": "PagerDuty Inc.",
+            "via_device": (DOMAIN, unique_device_name),
+        }
 
     @property
     def native_value(self):

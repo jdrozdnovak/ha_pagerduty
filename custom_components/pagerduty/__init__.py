@@ -3,10 +3,12 @@
 import logging
 from homeassistant import config_entries, core
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import CONF_API_KEY, Platform, CONF_NAME
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import discovery
+from homeassistant.helpers import (
+    discovery,
+    config_validation,
+    typing,
+)
 from datetime import timedelta
 from .const import DOMAIN
 from pdpyras import APISession
@@ -15,11 +17,11 @@ from .coordinator import PagerDutyDataUpdateCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.SENSOR, Platform.CALENDAR]
-CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+CONFIG_SCHEMA = config_validation.config_entry_only_config_schema(DOMAIN)
 SCAN_INTERVAL = timedelta(seconds=30)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(hass: HomeAssistant, config: typing.ConfigType) -> bool:
     """Set up the PagerDuty integration."""
     _LOGGER.debug("Setting up PagerDuty integration")
     _LOGGER.debug(f"Configuration data: {config}")

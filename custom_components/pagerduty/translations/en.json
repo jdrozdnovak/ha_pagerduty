@@ -27,10 +27,7 @@
         },
         "error": {
             "invalid_api_key": "The API key is invalid. Please check and try again.",
-            "cannot_connect": "Failed to connect to PagerDuty. Please check your network connection and try again."
-        },
-        "abort": {
-            "already_configured": "PagerDuty is already configured."
+            "invalid_api_key_or_roles": "Missing api roles"
         }
     }
 }
