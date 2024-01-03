@@ -140,6 +140,17 @@ class PagerDutySensor(SensorEntity, CoordinatorEntity):
         _LOGGER.debug("Initialized PagerDuty sensor: %s", self._attr_name)
 
     @property
+    def device_info(self):
+        """Return device info for linking this entity to the unique PagerDuty device."""
+        unique_device_name = f"PagerDuty_{self.coordinator.data.get('user_id', 'default_user_id')}"
+        return {
+            "identifiers": {(DOMAIN, unique_device_name)},
+            "name": unique_device_name,
+            "manufacturer": "PagerDuty Inc.",
+            "via_device": (DOMAIN, unique_device_name),
+        }
+
+    @property
     def native_value(self):
         """Return the state of the sensor."""
         value = self._value_fn(self.coordinator.data)

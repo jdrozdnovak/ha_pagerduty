@@ -1,5 +1,6 @@
 import logging
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 
@@ -82,6 +83,17 @@ class PagerDutyCalendar(CalendarEntity):
         self._attr_unique_id = f"pd_oncall_calendar_{self.user_id}"
         self.calendar_data = PagerDutyCalendarData(self.coordinator, self.user_id)
         self._events = []
+        
+    @property
+    def device_info(self):
+        """Return device info for linking this entity to the unique PagerDuty device."""
+        unique_device_name = f"PagerDuty_{self.coordinator.data.get('user_id', 'default_user_id')}"
+        return {
+            "identifiers": {(DOMAIN, unique_device_name)},
+            "name": unique_device_name,
+            "manufacturer": "PagerDuty Inc.",
+            "via_device": (DOMAIN, unique_device_name),
+        }
 
     async def async_get_events(self, hass, start_date, end_date):
         """Return events between start_date and end_date."""
