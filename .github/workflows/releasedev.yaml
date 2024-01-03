@@ -1,0 +1,59 @@
+name: Automated Release Workflow (dev)
+
+on:
+  pull_request:
+    types:
+        - opened
+        - edited
+        - closed
+    branches:
+        - dev
+
+permissions:
+  contents: write
+
+jobs:
+  gamma-release:
+    if: github.event.pull_request.merged == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+    
+      - name: Bump version and push tag (Beta)
+        id: bump_gama_version
+        uses: anothrNick/github-tag-action@1.64.0
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            PRERELEASE: true
+            WITH_V: true
+            DEFAULT_BUMP: "none"
+            PRERELEASE_SUFFIX: gamma.${{ github.run_number }}
+    
+      - name: Create or Overwrite Gamma Release
+        uses: ncipollo/release-action@v1
+        with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            tag: ${{ steps.bump_beta_version.outputs.new_tag }}
+            name: Gamma Release - ${{ steps.bump_beta_version.outputs.new_tag }}
+            allowUpdates: true
+            prerelease: true
+
+  test-sh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge Beta Releases
+        run: |
+          ls -la
+          pwd
+
+  purge-gamma-releases:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge Beta Releases
+        run: bash ./purge.sh
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            MERGED_BRANCH: ${{ github.event.pull_request.head.ref }}
+            GITHUB_REPOSITORY: ${{ github.repository }}
