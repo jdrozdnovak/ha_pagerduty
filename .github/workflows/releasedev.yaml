@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
     
       - name: Bump version and push tag (Beta)
-        id: bump_gama_version
+        id: bump_gamma_version
         uses: anothrNick/github-tag-action@1.64.0
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -30,8 +30,8 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
             token: ${{ secrets.GITHUB_TOKEN }}
-            tag: ${{ steps.bump_beta_version.outputs.new_tag }}
-            name: Gamma Release - ${{ steps.bump_beta_version.outputs.new_tag }}
+            tag: ${{ steps.bump_gamma_version.outputs.new_tag }}
+            name: Gamma Release - ${{ steps.bump_gamma_version.outputs.new_tag }}
             allowUpdates: true
             prerelease: true
 
@@ -40,6 +40,7 @@ jobs:
     steps:
       - name: Purge Beta Releases
         run: |
+          cd ..
           ls -la
           pwd
 
