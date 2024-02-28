@@ -105,9 +105,14 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
 
         unique_schedule_ids = set()
         for on_call in on_calls_data:
-            schedule_id = on_call.get("schedule", {}).get("id")
-            if schedule_id:
-                unique_schedule_ids.add(schedule_id)
+            _LOGGER.debug(f"On Calls: {on_call}")
+            schedule = on_call.get("schedule")
+            if schedule is not None:
+                schedule_id = schedule.get("id")
+                if schedule_id:
+                    unique_schedule_ids.add(schedule_id)
+            else:
+                _LOGGER.debug("Schedule is None")
 
         _LOGGER.debug(f"Unique schedule IDs: {unique_schedule_ids}")
 
