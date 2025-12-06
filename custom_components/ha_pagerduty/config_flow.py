@@ -3,7 +3,7 @@ import logging
 from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY
 from .const import DOMAIN, REQUIRED_ROLES
-from pdpyras import APISession, PDClientError
+from pagerduty import RestApiV2Client, Error
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def _test_api_key_and_fetch_user_data(self, api_key, api_base_url):
         """Test the API key and fetch abilities to validate roles."""
-        session = APISession(api_key)
+        session = RestApiV2Client(api_key)
         session.url = api_base_url
         try:
             abilities = session.rget("/abilities")
@@ -76,7 +76,7 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.debug(f"User {user}")
             return True, {"user": user}
 
-        except PDClientError:
+        except Error:
             return False, {}
 
     def _validate_user_roles(self, abilities):

@@ -11,7 +11,7 @@ from homeassistant.helpers import (
 )
 from datetime import timedelta
 from .const import DOMAIN
-from pdpyras import APISession
+from pagerduty import RestApiV2Client
 from .coordinator import PagerDutyDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ async def async_setup_entry(
     api_key = entry.data[CONF_API_KEY]
     ignored_team_ids = entry.data.get("ignored_team_ids", "")
     api_base_url = entry.data.get("api_base_url")
-    session = APISession(api_key)
+    session = RestApiV2Client(api_key)
     session.url = api_base_url
 
     _LOGGER.debug(f"Ignored team IDs: {ignored_team_ids}")
