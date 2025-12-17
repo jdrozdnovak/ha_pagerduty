@@ -1,6 +1,6 @@
 {
-  "domain": "ha_pagerduty",
-  "name": "ha_pagerduty",
+  "domain": "pagerduty",
+  "name": "PagerDuty",
   "codeowners": [
     "@jdrozdnovak"
   ],
