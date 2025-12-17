@@ -29,12 +29,12 @@ jobs:
             echo "Updating pagerduty to version $PAGERDUTY_VERSION"
             jq --arg version "$PAGERDUTY_VERSION" \
               '.requirements = ["pagerduty==\($version)"]' \
-              custom_components/ha_pagerduty/manifest.json > temp.json && \
-              mv temp.json custom_components/ha_pagerduty/manifest.json
+              custom_components/pagerduty/manifest.json > temp.json && \
+              mv temp.json custom_components/pagerduty/manifest.json
             
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add custom_components/ha_pagerduty/manifest.json
+            git add custom_components/pagerduty/manifest.json
             
             if git diff --staged --quiet; then
               echo "No changes to commit"
