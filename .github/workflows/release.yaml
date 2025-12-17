@@ -98,8 +98,8 @@ jobs:
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
             git checkout -b $BRANCH_NAME
-            jq '.version = "'$VERSION_TAG'"' custom_components/ha_pagerduty/manifest.json > temp.json && mv temp.json custom_components/ha_pagerduty/manifest.json
-            git add custom_components/ha_pagerduty/manifest.json
+            jq '.version = "'$VERSION_TAG'"' custom_components/pagerduty/manifest.json > temp.json && mv temp.json custom_components/pagerduty/manifest.json
+            git add custom_components/pagerduty/manifest.json
             git commit -m "Update version in manifest to $VERSION_TAG"
             git push origin $BRANCH_NAME
         env:
