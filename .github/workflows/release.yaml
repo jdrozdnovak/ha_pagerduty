@@ -21,11 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
     
       - name: Bump version and push tag (Beta)
         id: bump_beta_version
-        uses: anothrNick/github-tag-action@1.64.0
+        uses: anothrNick/github-tag-action@1
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             PRERELEASE: true
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Purge Beta Releases
         run: bash ./purge.sh
         env:
@@ -63,14 +63,14 @@ jobs:
       - name: List files in GITHUB_WORKSPACE
         run: ls -l ${{ github.workspace }}
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
             ref: ${{ github.event.pull_request.merge_commit_sha }}
             fetch-depth: '0'
     
       - name: Bump version and push tag (Latest)
         id: bump_latest_version
-        uses: anothrNick/github-tag-action@1.64.0
+        uses: anothrNick/github-tag-action@1
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             WITH_V: true
@@ -87,7 +87,7 @@ jobs:
             prerelease: false
 
       - name: Check out main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
             ref: main
     
