@@ -61,7 +61,7 @@ Contributions to the project are welcome!
 [hacs]: https://hacs.xyz
 [hacsbadge]: https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge
 [maintenance-shield]: https://img.shields.io/badge/maintainer-%40jdrozdnovak-blue.svg?style=for-the-badge
-[releases-shield]: https://img.shields.io/github/release/jdrozdnovak/ha_pagerduty.svg?style=for-the-badge
-[releases]: https://github.com/jdrozdnovak/ha_pagerduty/releases
+[releases-shield]: https://img.shields.io/github/release/jdrozdnovak/pagerduty.svg?style=for-the-badge
+[releases]: https://github.com/jdrozdnovak/pagerduty/releases
 [user_profile]: https://github.com/jdrozdnovak
-[license-shield]: https://img.shields.io/github/license/jdrozdnovak/ha_pagerduty.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/jdrozdnovak/pagerduty.svg?style=for-the-badge

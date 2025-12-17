@@ -1,14 +1,14 @@
 {
-  "domain": "ha_pagerduty",
-  "name": "ha_pagerduty",
+  "domain": "pagerduty",
+  "name": "pagerduty",
   "codeowners": [
     "@jdrozdnovak"
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/jdrozdnovak/ha_pagerduty",
+  "documentation": "https://github.com/jdrozdnovak/pagerduty",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/jdrozdnovak/ha_pagerduty/issues",
+  "issue_tracker": "https://github.com/jdrozdnovak/pagerduty/issues",
   "requirements": [
     "pagerduty==6.1.0"
   ],
