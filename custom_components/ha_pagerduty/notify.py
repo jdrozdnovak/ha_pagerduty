@@ -1,5 +1,5 @@
 import logging
-from pdpyras import APISession, EventsAPISession, PDClientError
+from pagerduty import RestApiV2Client, EventsApiV2Client, Error
 from homeassistant.components.notify import BaseNotificationService
 from .const import DOMAIN
 
@@ -16,7 +16,7 @@ async def async_get_service(hass, config, discovery_info=None):
     api_key = discovery_info[CONF_API_KEY]
     api_base_url = discovery_info.get("api_base_url")
 
-    session = APISession(api_key)
+    session = RestApiV2Client(api_key)
     session.url = api_base_url
     return PagerDutyNotificationService(session, api_base_url)
 
@@ -48,7 +48,7 @@ class PagerDutyNotificationService(BaseNotificationService):
             if self.api_base_url == "https://api.pagerduty.com"
             else "https://events.eu.pagerduty.com"
         )
-        event_session = EventsAPISession(integration_key)
+        event_session = EventsApiV2Client(integration_key)
         event_session.url = events_api_base_url
 
         source = "Home Assistant"
@@ -56,7 +56,7 @@ class PagerDutyNotificationService(BaseNotificationService):
         try:
             event_session.trigger(message, source)
             _LOGGER.debug("Sent notification to PagerDuty")
-        except PDClientError as e:
+        except Error as e:
             _LOGGER.error(f"Failed to send notification to PagerDuty: {e}")
 
 
