@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
     
       - name: Bump version and push tag (Alfa)
         id: bump_alfa_version
-        uses: anothrNick/github-tag-action@1.64.0
+        uses: anothrNick/github-tag-action@1
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             PRERELEASE: true
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Test SH
         run: |
           cd ${{ github.workspace }}
