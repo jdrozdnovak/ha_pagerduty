@@ -1,5 +1,5 @@
 """Constants for the PagerDuty integration."""
-DOMAIN = "ha_pagerduty"
+DOMAIN = "pagerduty"
 CONF_API_KEY = "api_key"
 REQUIRED_ROLES = [
     "abilities.read",
