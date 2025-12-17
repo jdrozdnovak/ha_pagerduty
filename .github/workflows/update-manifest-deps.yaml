@@ -1,0 +1,47 @@
+name: Update Manifest Dependencies
+
+on:
+  pull_request:
+    paths:
+      - 'requirements.txt'
+
+jobs:
+  update-manifest:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Update manifest.json with new dependency versions
+        run: |
+          # Extract pagerduty version from requirements.txt
+          PAGERDUTY_VERSION=$(grep "^pagerduty==" requirements.txt | cut -d'=' -f3)
+          
+          if [ -n "$PAGERDUTY_VERSION" ]; then
+            echo "Updating pagerduty to version $PAGERDUTY_VERSION"
+            jq --arg version "$PAGERDUTY_VERSION" \
+              '.requirements = ["pagerduty==\($version)"]' \
+              custom_components/ha_pagerduty/manifest.json > temp.json && \
+              mv temp.json custom_components/ha_pagerduty/manifest.json
+            
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add custom_components/ha_pagerduty/manifest.json
+            
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+            else
+              git commit -m "Update manifest.json with new pagerduty version"
+              git push
+            fi
+          else
+            echo "No pagerduty version found in requirements.txt"
+          fi

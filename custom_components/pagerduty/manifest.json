@@ -1,6 +1,6 @@
 {
   "domain": "pagerduty",
-  "name": "pagerduty",
+  "name": "PagerDuty",
   "codeowners": [
     "@jdrozdnovak"
   ],

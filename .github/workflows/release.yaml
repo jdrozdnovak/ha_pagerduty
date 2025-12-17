@@ -57,7 +57,7 @@ jobs:
               
 
   latest-release:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true && !startsWith(github.event.pull_request.head.ref, 'update-version-')
     runs-on: ubuntu-latest
     steps:
       - name: List files in GITHUB_WORKSPACE
@@ -94,12 +94,23 @@ jobs:
       - name: Update manifest.json with new version
         run: |
             VERSION_TAG=${{ steps.bump_latest_version.outputs.new_tag }}
-            jq '.version = "'$VERSION_TAG'"' custom_components/pagerduty/manifest.json > temp.json && mv temp.json custom_components/pagerduty/manifest.json
+            BRANCH_NAME="update-version-$VERSION_TAG"
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add custom_components/pagerduty/manifest.json
+            git checkout -b $BRANCH_NAME
+            jq '.version = "'$VERSION_TAG'"' custom_components/ha_pagerduty/manifest.json > temp.json && mv temp.json custom_components/ha_pagerduty/manifest.json
+            git add custom_components/ha_pagerduty/manifest.json
             git commit -m "Update version in manifest to $VERSION_TAG"
-            git push --force origin main
+            git push origin $BRANCH_NAME
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            branch: update-version-${{ steps.bump_latest_version.outputs.new_tag }}
+            title: "Update manifest version to ${{ steps.bump_latest_version.outputs.new_tag }}"
+            body: "Automated version update to ${{ steps.bump_latest_version.outputs.new_tag }}"
+            base: main
 
