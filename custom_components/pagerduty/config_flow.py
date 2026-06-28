@@ -68,16 +68,33 @@ class PagerDutyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             abilities = session.rget("/abilities")
             _LOGGER.debug(f"Available roles: {abilities}")
+        except Error as e:
+            _LOGGER.error(f"Failed to access PagerDuty API: {e}")
+            return False, {}
 
+        try:
             # for future role check discovery
             # if not self._validate_user_roles(abilities):
             #     raise PDClientError("User does not have required roles")
             user = session.rget("/users/me", params={"include[]": "teams"})
             _LOGGER.debug(f"User {user}")
             return True, {"user": user}
-
         except Error:
-            return False, {}
+            _LOGGER.info("API key may be an account key; checking for owner")
+
+        try:
+            users = session.rget("/users", params={"include[]": "teams"})
+            owners = [u for u in users if u["role"] == "owner"]
+            if not owners:
+                _LOGGER.warning("Could not find an owner for the account")
+                return True, {}
+            if len(owners) > 1:
+                _LOGGER.warning("Multiple owners found; using the first encountered")
+            user = owners[0]
+            return True, {"user": user}
+        except Error:
+            _LOGGER.warning("Could not retrieve users for the account")
+            return True, {}
 
     def _validate_user_roles(self, abilities):
         """Check if user has the required roles based on abilities."""

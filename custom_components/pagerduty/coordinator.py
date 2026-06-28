@@ -5,6 +5,7 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
 )
+from pagerduty import Error
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,12 +40,18 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
             user = await self.hass.async_add_executor_job(self.fetch_user)
             _LOGGER.debug(f"Fetched user: {user}")
 
-            user_id = user.get("id")
-            _LOGGER.debug(f"User ID: {user_id}")
-
-            self.teams = {
-                team["id"]: team["name"] for team in user.get("teams", [])
-            }
+            if user is None:
+                user_id = None
+                _LOGGER.debug("No user data available, account key may be in use")
+                # Retrieve all teams in the account
+                self.teams = await self.hass.async_add_executor_job(self.fetch_teams)
+            else:
+                user_id = user.get("id")
+                _LOGGER.debug(f"User ID: {user_id}")
+                # Use teams associated with this user
+                self.teams = {
+                    team["id"]: team["name"] for team in user.get("teams", [])
+                }
 
             team_ids = list(self.teams.keys())
 
@@ -82,23 +89,42 @@ class PagerDutyDataUpdateCoordinator(DataUpdateCoordinator):
 
     def fetch_user(self):
         """Fetch user data."""
-        return self.session.rget("/users/me", params={"include[]": "teams"})
+        try:
+            user = self.session.rget("/users/me", params={"include[]": "teams"})
+        except Error:
+            user = None
+        if user is None:
+            # Use owner as user for account keys
+            users = self.session.rget("/users", params={"include[]": "teams"})
+            owners = [u for u in users if u["role"] == "owner"]
+            if not owners:
+                _LOGGER.error("Could not find an owner for the account")
+                return None
+            if len(owners) > 1:
+                _LOGGER.warning("Multiple owners found; using the first encountered")
+            user = owners[0]
+
+        return user
+
+    def fetch_teams(self):
+        """Fetch team data."""
+        teams = self.session.rget("/teams")
+        return {team["id"]: team["name"] for team in teams}
 
     def fetch_on_call_schedules(self, user_id, time_zone):
         """Fetch on-call schedules based on user_id from PagerDuty."""
         _LOGGER.debug(f"Fetching on-call schedules for user_id: {user_id}")
 
-        if not user_id:
-            return []
-
         now = dt_util.now()
         until_date = now + timedelta(days=14)
 
         on_call_params = {
-            "user_ids[]": user_id,
             "time_zone": str(now.tzinfo),
             "until": until_date.strftime("%Y-%m-%d"),
         }
+        if user_id:
+            on_call_params["user_ids[]"] = user_id
+
         response = self.session.rget("/oncalls", params=on_call_params)
 
         on_calls_data = response if response else []
