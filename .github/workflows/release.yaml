@@ -14,7 +14,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   beta-release:
@@ -23,8 +22,10 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v6
-    
-      - name: Bump version and push tag (Beta)
+        with:
+            fetch-depth: '0'
+
+      - name: Compute next version (Beta)
         id: bump_beta_version
         uses: anothrNick/github-tag-action@1
         env:
@@ -33,7 +34,20 @@ jobs:
             WITH_V: true
             DEFAULT_BUMP: "patch"
             PRERELEASE_SUFFIX: beta.${{ github.run_number }}
-    
+            DRY_RUN: true
+
+      - name: Stamp version into manifest and tag
+        env:
+            VERSION_TAG: ${{ steps.bump_beta_version.outputs.new_tag }}
+        run: |
+            jq --arg version "$VERSION_TAG" '.version = $version' custom_components/pagerduty/manifest.json > temp.json
+            mv temp.json custom_components/pagerduty/manifest.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "Release $VERSION_TAG"
+            git tag -a "$VERSION_TAG" -m "Release $VERSION_TAG"
+            git push origin "refs/tags/$VERSION_TAG"
+
       - name: Create or Overwrite Beta Release
         uses: ncipollo/release-action@v1
         with:
@@ -55,27 +69,38 @@ jobs:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             MERGED_BRANCH: ${{ github.event.pull_request.head.ref }}
             GITHUB_REPOSITORY: ${{ github.repository }}
-              
+
 
   latest-release:
-    if: github.event.pull_request.merged == true && !startsWith(github.event.pull_request.head.ref, 'update-version-')
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - name: List files in GITHUB_WORKSPACE
-        run: ls -l ${{ github.workspace }}
       - name: Check out code
         uses: actions/checkout@v6
         with:
             ref: ${{ github.event.pull_request.merge_commit_sha }}
             fetch-depth: '0'
-    
-      - name: Bump version and push tag (Latest)
+
+      - name: Compute next version (Latest)
         id: bump_latest_version
         uses: anothrNick/github-tag-action@1
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             WITH_V: true
             DEFAULT_BUMP: "minor"
+            DRY_RUN: true
+
+      - name: Stamp version into manifest and tag
+        env:
+            VERSION_TAG: ${{ steps.bump_latest_version.outputs.new_tag }}
+        run: |
+            jq --arg version "$VERSION_TAG" '.version = $version' custom_components/pagerduty/manifest.json > temp.json
+            mv temp.json custom_components/pagerduty/manifest.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "Release $VERSION_TAG"
+            git tag -a "$VERSION_TAG" -m "Release $VERSION_TAG"
+            git push origin "refs/tags/$VERSION_TAG"
 
       - name: Create Latest Release
         uses: ncipollo/release-action@v1
@@ -86,28 +111,3 @@ jobs:
             body: ${{ github.event.pull_request.body }}
             draft: false
             prerelease: false
-
-      - name: Check out main
-        uses: actions/checkout@v6
-        with:
-            ref: main
-            fetch-depth: '0'
-
-      - name: Update manifest.json with new version
-        env:
-            VERSION_TAG: ${{ steps.bump_latest_version.outputs.new_tag }}
-        run: |
-            jq --arg version "$VERSION_TAG" '.version = $version' custom_components/pagerduty/manifest.json > temp.json
-            mv temp.json custom_components/pagerduty/manifest.json
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v8
-        with:
-            token: ${{ secrets.GITHUB_TOKEN }}
-            branch: update-version-${{ steps.bump_latest_version.outputs.new_tag }}
-            commit-message: "Update version in manifest to ${{ steps.bump_latest_version.outputs.new_tag }}"
-            title: "Update manifest version to ${{ steps.bump_latest_version.outputs.new_tag }}"
-            body: "Automated version update to ${{ steps.bump_latest_version.outputs.new_tag }}"
-            base: main
-            delete-branch: true
-

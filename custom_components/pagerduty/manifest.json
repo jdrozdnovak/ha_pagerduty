@@ -12,5 +12,5 @@
   "requirements": [
     "pagerduty==7.0.0"
   ],
-  "version": "v1.19.0"
+  "version": "v0.0.0"
 }
