@@ -1,1 +1,1 @@
-pagerduty==6.3.0
+pagerduty==7.0.0
