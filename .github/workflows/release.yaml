@@ -91,25 +91,23 @@ jobs:
         uses: actions/checkout@v6
         with:
             ref: main
-    
+            fetch-depth: '0'
+
       - name: Update manifest.json with new version
+        env:
+            VERSION_TAG: ${{ steps.bump_latest_version.outputs.new_tag }}
         run: |
-            VERSION_TAG=${{ steps.bump_latest_version.outputs.new_tag }}
-            BRANCH_NAME="update-version-$VERSION_TAG"
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
-            git checkout -b $BRANCH_NAME
-            jq '.version = "'$VERSION_TAG'"' custom_components/pagerduty/manifest.json > temp.json && mv temp.json custom_components/pagerduty/manifest.json
-            git add custom_components/pagerduty/manifest.json
-            git commit -m "Update version in manifest to $VERSION_TAG"
-            git push origin $BRANCH_NAME
-      
+            jq --arg version "$VERSION_TAG" '.version = $version' custom_components/pagerduty/manifest.json > temp.json
+            mv temp.json custom_components/pagerduty/manifest.json
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
         with:
             token: ${{ secrets.GITHUB_TOKEN }}
             branch: update-version-${{ steps.bump_latest_version.outputs.new_tag }}
+            commit-message: "Update version in manifest to ${{ steps.bump_latest_version.outputs.new_tag }}"
             title: "Update manifest version to ${{ steps.bump_latest_version.outputs.new_tag }}"
             body: "Automated version update to ${{ steps.bump_latest_version.outputs.new_tag }}"
             base: main
+            delete-branch: true
 
